@@ -30,6 +30,8 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
 
     private List<Expression<JsonNode>> expressions = new ArrayList<Expression<JsonNode>>();
     private final ObjectWriter writer = EntityFactory.EntityMapper.FULL_ENTITY_MAPPER().writer();
+    public String replacement = "$1";
+    public String regex;
 
     @Override
     public Class<Substance> getIndexedEntityClass() {
@@ -53,6 +55,11 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
                         Map.Entry<String, JsonNode> field = fields.next();
                         String key = field.getKey();
                         String value = field.getValue().asText(null);
+                        if (regex != null) {
+                            try {
+                                value = value.replaceAll(regex, replacement);
+                            } catch (Exception e) {}
+                        }
                         if (key == null || key.isEmpty() || value == null || value.isEmpty()) {
                             continue;
                         } else if (key.startsWith("root_")) {
