@@ -127,13 +127,13 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
                         if (obj.code.length() > mask) {
                             String display = config.terms.get(obj.code.substring(0, mask));
                             if (display != null) {
-                                comments = display + " | " + comments;
+                                comments = display + "|" + comments;
                             }
                         }
                     }
                 }
                 if (config.prefix != null) {
-                    comments = config.prefix + " | " + comments;
+                    comments = config.prefix + "|" + comments;
                 }
                 obj.comments = comments;
             }
