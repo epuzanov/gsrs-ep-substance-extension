@@ -1,14 +1,12 @@
 package ep.gsrs.module.substance.processors;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.nih.ncats.common.util.CachedSupplier;
 import gsrs.cv.api.ControlledVocabularyApi;
 import gsrs.cv.api.GsrsControlledVocabularyDTO;
 import gsrs.cv.api.GsrsVocabularyTermDTO;
 import ix.core.EntityProcessor;
 import ix.ginas.models.v1.Code;
-import lombok.extern.slf4j.Slf4j;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,6 +15,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+
 /**
  * This EntityProcessor will create a Classifications comments string
  * for the Code using CV as the source (code.code = vt.value and
@@ -24,6 +26,7 @@ import java.util.Optional;
  *
  * @author Egor Puzanov
  */
+@Data
 @Slf4j
 public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
 
@@ -112,12 +115,12 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
     }
 
     @Override
-    public void initialize() throws FailProcessingException{
+    public void initialize() throws EntityProcessor.FailProcessingException {
         initializer.getSync();
     }
 
     @Override
-    public void prePersist(Code obj) {
+    public void prePersist(Code obj) throws EntityProcessor.FailProcessingException {
         if (config.codeSystem.equals(obj.codeSystem) && obj.code != null && !obj.code.isEmpty() && !obj.isClassification()) {
             updateTermsIfNeeded();
             String comments = config.terms.get(obj.code);
@@ -141,7 +144,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
     }
 
     @Override
-    public void preUpdate(Code obj) {
+    public void preUpdate(Code obj) throws EntityProcessor.FailProcessingException {
         prePersist(obj);
     }
 
