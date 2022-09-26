@@ -1,4 +1,4 @@
-package ep.gsrs.module.substance.processors;
+package gsrs.module.substance.processors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import gov.nih.ncats.common.util.CachedSupplier;

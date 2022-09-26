@@ -1,4 +1,4 @@
-package ep.gsrs.module.substance.indexers;
+package gsrs.module.substance.indexers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
