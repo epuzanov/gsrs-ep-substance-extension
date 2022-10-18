@@ -15,11 +15,10 @@ import ix.ginas.models.v1.Substance;
 
 /**
  * Substance Exporter that writes out data to a Spreadsheet.
- * Created by epuzanov
+ * Created by Egor Puzanov
  */
 public class JmespathSpreadsheetExporter implements Exporter<Substance> {
 
-    private static boolean publicOnly = false;
     private final Spreadsheet spreadsheet;
     private int row=1;
     private final List<ColumnValueRecipe<JsonNode>> recipeMap;
@@ -56,10 +55,6 @@ public class JmespathSpreadsheetExporter implements Exporter<Substance> {
         spreadsheet.close();
     }
 
-    public void includePublicDataOnly(boolean publicOnly){
-        this.publicOnly = publicOnly;
-    }
-
     private void updateReferences(JsonNode tree) {
         ArrayNode references = (ArrayNode)tree.at("/references");
         Map<String, Integer> refMap = new HashMap<String, Integer>();
@@ -87,8 +82,6 @@ public class JmespathSpreadsheetExporter implements Exporter<Substance> {
     public static class Builder{
         private final List<ColumnValueRecipe<JsonNode>> columns = new ArrayList<>();
         private final Spreadsheet spreadsheet;
-
-        private boolean publicOnly = false;
 
         /**
          * Create a new Builder that uses the given Spreadsheet to write to.
@@ -132,11 +125,6 @@ public class JmespathSpreadsheetExporter implements Exporter<Substance> {
 
         public JmespathSpreadsheetExporter build(){
             return new JmespathSpreadsheetExporter(this);
-        }
-
-        public Builder includePublicDataOnly(boolean publicOnly){
-            this.publicOnly = publicOnly;
-            return this;
         }
     }
 }

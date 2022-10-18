@@ -1,23 +1,42 @@
 package gsrs.module.substance.exporters;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 import ix.ginas.exporters.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.*;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Created by epuzanov.
+ * Created by Egor Puzanov.
  */
 
 public class JmespathSpreadsheetExporterFactory implements ExporterFactory {
 
-    OutputFormat format = new OutputFormat("custom.xlsx", "Custom Report (xlsx) File");
+    private OutputFormat format = new OutputFormat("custom.xlsx", "Custom Report (xlsx) File");
 
-    @Autowired
-    private JmespathSpreadsheetExporterConfiguration jmespathExporterConfiguration;
+    private List<Map<String, String>> columnExpressions = (List<Map<String, String>>) Arrays.asList((Map<String, String>) new HashMap<String, String>(){{put("name", "UUID"); put("expression", "uuid");}});
+
+    public void setFormat(Map<String, String> m) {
+        this.format = new OutputFormat(m.get("extension"), m.get("displayName"));
+    }
+
+    public void setColumnExpressions(Map<Integer, Map<String, String>> m) {
+        this.columnExpressions = (List<Map<String, String>>) m.entrySet()
+                                                            .stream()
+                                                            .sorted(Map.Entry.comparingByKey())
+                                                            .map(e->e.getValue())
+                                                            .collect(Collectors.toList());
+    }
 
     @Override
     public boolean supports(Parameters params) {
@@ -31,30 +50,21 @@ public class JmespathSpreadsheetExporterFactory implements ExporterFactory {
 
     @Override
     public JmespathSpreadsheetExporter createNewExporter(OutputStream out, Parameters params) throws IOException {
-        String ext = format.getExtension();
-        Spreadsheet spreadsheet;
-        if (ext.endsWith(".csv")) {
-            spreadsheet = new CsvSpreadsheetBuilder(out)
-                .quoteCells(true)
-                .maxRowsInMemory(100)
-                .build();
-        } else if (ext.endsWith(".txt")) {
-            spreadsheet = new CsvSpreadsheetBuilder(out)
-                .delimiter('\t')
-                .quoteCells(false)
-                .maxRowsInMemory(100)
-                .build();
-        } else {
-            spreadsheet = new ExcelSpreadsheet.Builder(out)
-                .maxRowsInMemory(100)
-                .build();
-        }
+        Spreadsheet spreadsheet = new ExcelSpreadsheet.Builder(out)
+                                                      .maxRowsInMemory(100)
+                                                      .build();
         JmespathSpreadsheetExporter.Builder builder = new JmespathSpreadsheetExporter.Builder(spreadsheet);
-        for (Map<String, String> columnExpression : jmespathExporterConfiguration.getColumnExpressions()) {
+        for (Map<String, String> columnExpression : columnExpressions) {
             String columnName = columnExpression.get("name");
             ColumnValueRecipe recipe = JmespathColumnValueRecipe.create(columnName, columnExpression.get("expression"), columnExpression.getOrDefault("delimiter", "|"));
             builder = builder.addColumn(columnName, recipe);
         }
-        return builder.includePublicDataOnly(params.publicOnly()).build();
+        return builder.build();
+    }
+
+    //@Override
+    public JsonNode getSchema() {
+        ObjectNode parameters = JsonNodeFactory.instance.objectNode();
+        return parameters;
     }
 }

@@ -11,7 +11,7 @@ import io.burt.jmespath.jackson.JacksonRuntime;
 import ix.ginas.exporters.*;
 
 /**
- * Created by epuzanov on 11/8/21.
+ * Created by Egor Puzanov on 11/8/21.
  */
 public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
 
