@@ -7,6 +7,7 @@ import ix.ginas.models.v1.SubstanceReference;
 import ix.utils.Util;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,13 +34,13 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
     private SubstanceReferenceProcessorConfig config;
 
     public static class SubstanceReferenceProcessorConfig {
-        private Map<Pattern, String> codeSystemPatterns = new HashMap<Pattern, String>();
-        public void setCodeSystemPatterns(Map<String, String> m) {
-            for (Map.Entry<String, String> entry : m.entrySet()) {
-                codeSystemPatterns.put(Pattern.compile(entry.getKey()), entry.getValue());
+        private Map<String, Pattern> codeSystemPatterns = new HashMap<String, Pattern>();
+        public void setCodeSystemPatterns(Map<String, Map<String, String>> m) {
+            for (Map<String, String> csp : m.values()) {
+                codeSystemPatterns.put(csp.get("codeSystem"), Pattern.compile(csp.get("pattern")));
             }
         }
-        public Map<Pattern, String> getCodeSystemPatterns() {
+        public Map<String, Pattern> getCodeSystemPatterns() {
             return codeSystemPatterns;
         }
     }
@@ -55,7 +56,6 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
 
     @Override
     public void prePersist(SubstanceReference obj) throws EntityProcessor.FailProcessingException {
-        String codeSystem = null;
         SubstanceRepository.SubstanceSummary relatedSubstanceSummary = null;
         if (relatedSubstanceSummary == null) {
             if (obj.refuuid != null && !obj.refuuid.isEmpty()) {
@@ -71,10 +71,11 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
             }
         }
         if (relatedSubstanceSummary == null) {
-            for (Map.Entry<Pattern, String> entry : config.codeSystemPatterns.entrySet()) {
-                Matcher m = entry.getKey().matcher(obj.approvalID);
+            for (Map.Entry<String, Pattern> entry : config.codeSystemPatterns.entrySet()) {
+                if (obj.approvalID == null) continue;
+                Matcher m = entry.getValue().matcher(obj.approvalID);
                 if (m.find()) {
-                    relatedSubstanceSummary = substanceRepository.findByCodes_CodeAndCodes_CodeSystem(m.group(1), entry.getValue()).stream().findFirst().orElse(null);
+                    relatedSubstanceSummary = substanceRepository.findByCodes_CodeAndCodes_CodeSystem(obj.approvalID, entry.getKey()).stream().findFirst().orElse(null);
                     if (relatedSubstanceSummary != null) {
                         break;
                     }
@@ -86,6 +87,7 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
         }
         if (relatedSubstanceSummary instanceof SubstanceRepository.SubstanceSummary) {
             SubstanceReference sr = relatedSubstanceSummary.toSubstanceReference();
+            log.debug("New SubstanceReference: " + sr.toString());
             obj.refuuid = sr.refuuid;
             obj.refPname = sr.refPname;
             obj.approvalID = sr.approvalID;
