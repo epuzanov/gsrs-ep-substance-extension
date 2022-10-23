@@ -11,19 +11,21 @@ import ix.ginas.models.v1.Substance;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.TrustAllStrategy;
-import org.apache.http.conn.ssl.AllowAllHostnameVerifier;
-import org.apache.http.conn.ssl.SSLContexts;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 
@@ -43,7 +45,21 @@ public class GsrsApiExporterFactory implements ExporterFactory {
     private boolean trustAllCerts = false;
     private boolean validate = true;
     private String baseUrl = "http://localhost:8080/api/v1/substances";
-    private Map<String, String> headers;
+    private Map<String, String> headers = new HashMap<String, String>();
+    private final TrustManager[] trustAllCertificates = new TrustManager[]{
+        new X509TrustManager() {
+            public X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+            public void checkClientTrusted(
+               X509Certificate[] certs, String authType) {
+            }
+            public void checkServerTrusted(
+               X509Certificate[] certs, String authType) {
+           }
+        }
+    };
+
 
     public void setFormat(Map<String, String> m) {
         this.format = new OutputFormat(m.get("extension"), m.get("displayName"));
@@ -89,11 +105,9 @@ public class GsrsApiExporterFactory implements ExporterFactory {
             .setDefaultRequestConfig(requestConfig);
         if (trustAllCerts) {
             try {
-                SSLContext sslContext = SSLContexts.custom()
-                    .loadTrustMaterial(null, new TrustAllStrategy())
-                    .useTLS()
-                    .build();
-                SSLConnectionSocketFactory connectionFactory = new SSLConnectionSocketFactory(sslContext, new AllowAllHostnameVerifier());
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(null, trustAllCertificates, new SecureRandom());
+                SSLConnectionSocketFactory connectionFactory = new SSLConnectionSocketFactory(sslContext, new NoopHostnameVerifier());
                 client = client.setSSLSocketFactory(connectionFactory);
             } catch (Exception ex) {
             }

@@ -81,7 +81,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
                             .terms(list)
                             .build());
                     if (config.cvVersion != null) {
-                        config.cvVersion = new Long(1);
+                        config.cvVersion = Long.valueOf(1);
                     }
                 } else {
                     if (config.cvVersion != null) {

@@ -19,10 +19,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Created by Egor Puzanov on 10/18/22.
  */
+@Slf4j
 public class GsrsApiExporter implements Exporter<Substance> {
 
     private final HttpHeaders headers;
@@ -45,32 +47,30 @@ public class GsrsApiExporter implements Exporter<Substance> {
         this.validate = validate;
     }
 
+    private HttpEntity<String> makeRequest(Substance obj) throws Exception {
+        HttpEntity<String> request = new HttpEntity<String>(writer.writeValueAsString(obj), headers);
+        if (validate) {
+            ValidationResponse vr = restTemplate.postForObject("/@validate", request, ValidationResponse.class);
+            if (vr.getValidationMessages().isEmpty()) throw new Exception("GSRS API not found");
+            if (vr.hasError()) throw new Exception(vr.toString());
+        }
+        return request;
+    }
+
     @Override
     public void export(Substance obj) throws IOException {
+        HttpEntity<String> request;
         Date date = new Date();
-        boolean update = true;
         try {
-            obj.version = restTemplate.getForObject("/{uuid}/version", String.class, obj.getUuid().toString()).replace("\"", "");
-        } catch (HttpClientErrorException.NotFound ex) {
-            obj.version = "1";
-            update = false;
-        } catch (Exception ex) {
-            out.write(String.format("%tF %tT Substance: %s %s - ERROR: %s", date, date, obj.getUuid().toString(), obj.getName(), ex.getMessage()));
-            out.newLine();
-            return;
-        }
-        HttpEntity<String> request = new HttpEntity<String>(writer.writeValueAsString(obj), headers);
-        try {
-            if (validate) {
-                ValidationResponse vr = restTemplate.postForObject("/@validate", request, ValidationResponse.class);
-                if (vr.hasError()) {
-                    throw new Exception(vr.toString());
-                }
-            }
-            if (update) {
+            try {
+                obj.version = restTemplate.getForObject("/{uuid}/version", String.class, obj.getUuid().toString()).replace("\"", "");
+                request = makeRequest(obj);
                 restTemplate.put("/", request);
-            } else {
-                obj = restTemplate.postForObject("/", request, Substance.class);
+            } catch (HttpClientErrorException.NotFound ex) {
+                obj.version = "1";
+                request = makeRequest(obj);
+                Substance newObj = restTemplate.postForObject("/", request, Substance.class);
+                if (newObj.getUuid() == null) throw new Exception("GSRS API not found");
             }
             out.write(String.format("%tF %tT Substance: %s %s - SUCCESS", date, date, obj.getUuid().toString(), obj.getName()));
         } catch (Exception ex) {
