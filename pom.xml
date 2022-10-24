@@ -17,6 +17,7 @@
         <log4j2.version>2.17.2</log4j2.version>
         <jmespath.version>0.5.1</jmespath.version>
         <httpclient.version>4.5.13</httpclient.version>
+        <jose.version>3.5.3</jose.version>
     </properties>
 
     <dependencies>
@@ -51,6 +52,11 @@
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
             <version>${httpclient.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.cxf</groupId>
+            <artifactId>cxf-rt-rs-security-jose</artifactId>
+            <version>${jose.version}</version>
         </dependency>
     </dependencies>
 
