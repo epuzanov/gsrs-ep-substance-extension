@@ -47,7 +47,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
 
         public void setMasks(Map<Integer, Integer> m) {
             masks = m.entrySet().stream()
-                                .sorted(Map.Entry.<Integer, Integer>comparingByKey().reversed())
+                                .sorted(Map.Entry.<Integer, Integer>comparingByKey())
                                 .mapToInt(e->e.getValue())
                                 .toArray();
         }
@@ -123,18 +123,19 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
     public void prePersist(Code obj) throws EntityProcessor.FailProcessingException {
         if (config.codeSystem.equals(obj.codeSystem) && obj.code != null && !obj.code.isEmpty() && !obj.isClassification()) {
             updateTermsIfNeeded();
-            String comments = config.terms.get(obj.code);
-            if (comments != null) {
-                if (config.masks.length > 0) {
-                    for (int mask: config.masks) {
-                        if (obj.code.length() > mask) {
-                            String display = config.terms.get(obj.code.substring(0, mask));
-                            if (display != null) {
-                                comments = display + "|" + comments;
-                            }
+            String comments = "";
+            if (config.masks.length > 0) {
+                for (int mask: config.masks) {
+                    if (obj.code.length() > mask) {
+                        String display = config.terms.get(obj.code.substring(0, mask));
+                        if (display != null) {
+                            comments = comments + "|" + display;
                         }
                     }
                 }
+            }
+            if (!comments.isEmpty()) {
+                comments = comments.substring(1);
                 if (config.prefix != null) {
                     comments = config.prefix + "|" + comments;
                 }
