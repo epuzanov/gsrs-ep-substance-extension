@@ -34,13 +34,13 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
     private SubstanceReferenceProcessorConfig config;
 
     public static class SubstanceReferenceProcessorConfig {
-        private Map<String, Pattern> codeSystemPatterns = new HashMap<String, Pattern>();
+        private Map<Pattern, String> codeSystemPatterns = new HashMap<Pattern, String>();
         public void setCodeSystemPatterns(Map<String, Map<String, String>> m) {
             for (Map<String, String> csp : m.values()) {
-                codeSystemPatterns.put(csp.get("codeSystem"), Pattern.compile(csp.get("pattern")));
+                codeSystemPatterns.put(Pattern.compile(csp.get("pattern")), csp.get("codeSystem"));
             }
         }
-        public Map<String, Pattern> getCodeSystemPatterns() {
+        public Map<Pattern, String> getCodeSystemPatterns() {
             return codeSystemPatterns;
         }
     }
@@ -71,11 +71,11 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
             }
         }
         if (relatedSubstanceSummary == null) {
-            for (Map.Entry<String, Pattern> entry : config.codeSystemPatterns.entrySet()) {
+            for (Map.Entry<Pattern, String> entry : config.codeSystemPatterns.entrySet()) {
                 if (obj.approvalID == null) continue;
-                Matcher m = entry.getValue().matcher(obj.approvalID);
+                Matcher m = entry.getKey().matcher(obj.approvalID);
                 if (m.find()) {
-                    relatedSubstanceSummary = substanceRepository.findByCodes_CodeAndCodes_CodeSystem(obj.approvalID, entry.getKey()).stream().findFirst().orElse(null);
+                    relatedSubstanceSummary = substanceRepository.findByCodes_CodeAndCodes_CodeSystem(obj.approvalID, entry.getValue()).stream().findFirst().orElse(null);
                     if (relatedSubstanceSummary != null) {
                         break;
                     }
@@ -88,10 +88,10 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
         if (relatedSubstanceSummary instanceof SubstanceRepository.SubstanceSummary) {
             SubstanceReference sr = relatedSubstanceSummary.toSubstanceReference();
             log.debug("New SubstanceReference: " + sr.toString());
-            obj.refuuid = sr.refuuid;
-            obj.refPname = sr.refPname;
-            obj.approvalID = sr.approvalID;
-            obj.substanceClass = sr.substanceClass;
+            obj.refuuid = new String(sr.refuuid);
+            obj.refPname = new String(sr.refPname);
+            obj.approvalID = new String(sr.approvalID);
+            obj.substanceClass = new String(sr.substanceClass);
         }
     }
 

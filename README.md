@@ -215,7 +215,7 @@ gsrs.entityProcessors += {
     "processor" = "gsrs.module.substance.processors.SubstanceReferenceProcessor",
     "with" = {
         "codeSystemPatterns" : [
-            {"codeSystem": "FDA UNII", "pattern": "^[0-9A-Z{10}$]"}
+            {"pattern": "^[0-9A-Z]{10}$", "codeSystem": "FDA UNII"}
         ]
     }
 }
@@ -244,7 +244,10 @@ The SubstanceReferenceProcessor canbe used to fix broken substance references af
 gsrs.scheduled-tasks.list+= {
     "scheduledTaskClass" : "gsrs.module.substance.tasks.UpdateSubstanceReferenceTaskInitializer",
     "parameters" : {
-        "autorun": false
+        "autorun": false,
+        "codeSystemPatterns" : [
+            {"pattern": "^[0-9A-Z]{10}$", "codeSystem": "FDA UNII"}
+        ]
     }
 }
 ```
