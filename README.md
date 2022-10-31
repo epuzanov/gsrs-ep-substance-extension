@@ -137,7 +137,7 @@ The CVClassificationsCodeProcessor can be used for creating the comment string f
 ```
 gsrs.entityProcessors += {
     "entityClassName" = "ix.ginas.models.v1.Code",
-    "processor" = "ep.gsrs.module.substance.processors.CVClassificationsCodeProcessor",
+    "processor" = "gsrs.module.substance.processors.CVClassificationsCodeProcessor",
     "with" = {
         "codeSystem" = "WHO-ATC",
         "prefix" = "ATC",
@@ -179,7 +179,7 @@ gsrs.entityProcessors += {
 ```
 gsrs.entityProcessors += {
     "entityClassName" = "ix.ginas.models.v1.Code",
-    "processor" = "ep.gsrs.module.substance.processors.CVClassificationsCodeProcessor",
+    "processor" = "gsrs.module.substance.processors.CVClassificationsCodeProcessor",
     "with" = {
         "codeSystem" = "WHO-ATC",
         "prefix" = "ATC",
@@ -194,7 +194,7 @@ gsrs.entityProcessors += {
 ```
 gsrs.entityProcessors += {
     "entityClassName" = "ix.ginas.models.v1.Code",
-    "processor" = "ep.gsrs.module.substance.processors.CVClassificationsCodeProcessor",
+    "processor" = "gsrs.module.substance.processors.CVClassificationsCodeProcessor",
     "with" = {
         "codeSystem" = "WHO-ATC",
         "prefix" = "ATC",
