@@ -85,8 +85,13 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
                     }
                 } else {
                     if (config.cvVersion != null) {
-                        config.cvVersion = opt.get().getVersion();
+                        config.cvVersion = Long.valueOf(opt.get().getVersion());
                     }
+                    Map<String, String> tms = new HashMap<String, String>();
+                    for (GsrsVocabularyTermDTO term : new ArrayList<GsrsVocabularyTermDTO>(opt.get().getTerms())) {
+                        tms.put(new String(term.getValue()), new String(term.getDisplay()));
+                    }
+                    config.terms = tms;
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -101,12 +106,12 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
             try {
                 Optional<GsrsControlledVocabularyDTO> opt = api.findByDomain(config.cvDomain);
                 if (opt.isPresent() && config.cvVersion != null && opt.get().getVersion() > config.cvVersion) {
-                    Map<String, String> terms = new HashMap<String, String>();
+                    Map<String, String> tms = new HashMap<String, String>();
                     for (GsrsVocabularyTermDTO term : new ArrayList<GsrsVocabularyTermDTO>(opt.get().getTerms())) {
-                        terms.put(term.getValue(), term.getDisplay());
+                        tms.put(new String(term.getValue()), new String(term.getDisplay()));
                     }
-                    config.terms = terms;
-                    config.cvVersion = opt.get().getVersion();
+                    config.terms = tms;
+                    config.cvVersion = Long.valueOf(opt.get().getVersion());
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -122,7 +127,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
     @Override
     public void prePersist(Code obj) throws EntityProcessor.FailProcessingException {
         if (config.codeSystem.equals(obj.codeSystem) && obj.code != null && !obj.code.isEmpty() && !obj.isClassification()) {
-            updateTermsIfNeeded();
+            //updateTermsIfNeeded();
             String comments = "";
             if (config.masks.length > 0) {
                 for (int mask: config.masks) {
