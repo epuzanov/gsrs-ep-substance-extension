@@ -199,7 +199,7 @@ gsrs.entityProcessors += {
         "codeSystem" = "WHO-ATC",
         "prefix" = "ATC",
         "masks" = [1, 3, 4, 5],
-        "cvDomain": "CV_CLASSIFICATION_WHO_ATC"
+        "cvDomain": "CLASSIFICATION_WHO_ATC"
     }
 }
 ```
@@ -244,10 +244,7 @@ The SubstanceReferenceProcessor canbe used to fix broken substance references af
 gsrs.scheduled-tasks.list+= {
     "scheduledTaskClass" : "gsrs.module.substance.tasks.UpdateSubstanceReferenceTaskInitializer",
     "parameters" : {
-        "autorun": false,
-        "codeSystemPatterns" : [
-            {"pattern": "^[0-9A-Z]{10}$", "codeSystem": "FDA UNII"}
-        ]
+        "autorun": false
     }
 }
 ```
