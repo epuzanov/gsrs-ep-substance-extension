@@ -48,7 +48,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
 
     public static class CVClassificationsCodeProcessorConfig {
         private Instant lastUpdated = Instant.now();
-        private Long timeout = Long.valueOf(60);
+        private Long timeout = Long.valueOf(300);
         public String codeSystem = "WHO-ATC";
         public String cvDomain;
         public Long cvVersion;
@@ -174,7 +174,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
 
     @Override
     public void prePersist(Code obj) throws EntityProcessor.FailProcessingException {
-        if (config.codeSystem.equals(obj.codeSystem) && obj.code != null && !obj.code.isEmpty() && !obj.isClassification()) {
+        if (config.codeSystem.equals(obj.codeSystem) && obj.code != null && !obj.code.isEmpty()) {
             updateTermsIfNeeded();
             String comments = "";
             if (config.masks.length > 0) {
@@ -192,7 +192,9 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
                 if (config.prefix != null) {
                     comments = config.prefix + "|" + comments;
                 }
-                obj.comments = comments;
+                if (!comments.equals(obj.comments)) {
+                    obj.comments = comments;
+                }
             }
         }
     }
