@@ -175,21 +175,23 @@ gsrs.entityProcessors += {
 ```
 
 #### Alternative Configuration 1
+Include Veterinary ATC codes dictionary from JSON file include LEVEL 5 codes.
 
 ```
 gsrs.entityProcessors += {
     "entityClassName" = "ix.ginas.models.v1.Code",
     "processor" = "gsrs.module.substance.processors.CVClassificationsCodeProcessor",
     "with" = {
-        "codeSystem" = "WHO-ATC",
-        "prefix" = "ATC",
-        "masks" = [1, 3, 4, 5],
-        "terms" = { include "atcCodes.json" }
+        "codeSystem" = "WHO-VATC",
+        "prefix" = "VATC",
+        "masks" = [2, 4, 5, 6, 8],
+        "terms" = { include "vatcCodes.json" }
     }
 }
 ```
 
 #### Alternative Configuration 2
+Use the GSRS CV for storing ATC Classification information. And initially populate the CV from the JSON file if the cvVersion is greater then the version of the CV Domain.
 
 ```
 gsrs.entityProcessors += {
@@ -199,7 +201,9 @@ gsrs.entityProcessors += {
         "codeSystem" = "WHO-ATC",
         "prefix" = "ATC",
         "masks" = [1, 3, 4, 5],
-        "cvDomain": "CLASSIFICATION_WHO_ATC"
+        "cvDomain": "CLASSIFICATION_WHO_ATC",
+        "cvVersion": 2,
+        "terms" = { include "atcCodes.json" }
     }
 }
 ```
