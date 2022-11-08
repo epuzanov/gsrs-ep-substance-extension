@@ -95,7 +95,7 @@ The JsonPortableExporter can be used for exporting substances in the GSRS portab
 
 ```
 ix.ginas.export.exporterfactories.substances += {
-    "exporterFactoryClass": "gsrs.module.substance.exporters.GsrsApiExporterFactory",
+    "exporterFactoryClass": "gsrs.module.substance.exporters.JsonPortableExporterFactory",
     "parameters": {
         "format": {
             "extension": "gsrsp",
