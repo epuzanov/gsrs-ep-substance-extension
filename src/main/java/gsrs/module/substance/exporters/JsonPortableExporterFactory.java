@@ -29,7 +29,7 @@ public class JsonPortableExporterFactory implements ExporterFactory{
     private OutputFormat format = new OutputFormat("gsrsp", "Json Portable Export (gsrsp) File");
     private List<String> fieldsToRemove  = Arrays.asList("_name","_nameHTML","_formulaHTML","_approvalIDDisplay","_isClassification","_self","self","approvalID","approved","approvedBy","changeReason","created","createdBy","lastEdited","lastEditedBy","deprecated","uuid","refuuid","originatorUuid","linkingID","id","documentDate","status","version");
     private boolean shouldCompress = true;
-    private String gsrsVersion = "3.0.2";
+    private String gsrsVersion = "3.0.3";
     private boolean sign = false;
 
     public void setFormat(Map<String, String> m) {
@@ -70,7 +70,7 @@ public class JsonPortableExporterFactory implements ExporterFactory{
         return new JsonPortableExporter(out, fieldsToRemove, sign, gsrsVersion);
     }
 
-    //@Override
+    @Override
     public JsonNode getSchema() {
         ObjectNode parameters = JsonNodeFactory.instance.objectNode();
         return parameters;

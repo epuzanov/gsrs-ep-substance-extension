@@ -118,7 +118,7 @@ public class GsrsApiExporterFactory implements ExporterFactory {
         return new GsrsApiExporter(out, restTemplate, headers, validate);
     }
 
-    //@Override
+    @Override
     public JsonNode getSchema() {
         ObjectNode parameters = JsonNodeFactory.instance.objectNode();
         return parameters;

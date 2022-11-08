@@ -62,7 +62,7 @@ public class JmespathSpreadsheetExporterFactory implements ExporterFactory {
         return builder.build();
     }
 
-    //@Override
+    @Override
     public JsonNode getSchema() {
         ObjectNode parameters = JsonNodeFactory.instance.objectNode();
         return parameters;
