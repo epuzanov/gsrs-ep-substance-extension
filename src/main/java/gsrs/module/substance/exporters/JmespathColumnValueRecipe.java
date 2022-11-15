@@ -8,10 +8,12 @@ import ix.ginas.exporters.*;
 import java.util.Date;
 import java.util.Objects;
 import java.text.SimpleDateFormat;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Created by Egor Puzanov on 11/8/21.
  */
+@Slf4j
 public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
 
     private final String columnName;
@@ -35,11 +37,10 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
 
     static <T>  ColumnValueRecipe<T> create(String columnName, String expression, String delimiter, String datetime) {
         JmesPath<JsonNode> jmespath = new JacksonRuntime();
-        SimpleDateFormat dtf;
+        SimpleDateFormat dtf = null;
         try {
             dtf = new SimpleDateFormat(datetime);
         } catch (Exception ex) {
-            dtf = null;
         }
         return new JmespathColumnValueRecipe<T>(columnName, jmespath.compile(expression), delimiter, dtf);
     }
@@ -48,7 +49,14 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
     public int writeValuesFor(Spreadsheet.SpreadsheetRow row, int currentOffset, T obj) {
         JsonNode results = expression.search((JsonNode) obj);
         if (results.isValueNode() && ! results.isNull()) {
-            row.getCell(currentOffset).writeString(results.asText());
+            String value = results.asText();
+            if (datetime != null) {
+                try {
+                    value = datetime.format(new Date(Long.valueOf(value)));
+                } catch (Exception ex) {
+                }
+            }
+            row.getCell(currentOffset).writeString(value);
         } else if (results.isArray()) {
             StringBuilder sb = new StringBuilder();
             for(JsonNode result: results){
@@ -62,13 +70,7 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
                     }
                 }
             }
-            if (sb.length()!=0) {
-                if (datetime != null) {
-                    try {
-                        sb.replace(0, sb.length(), datetime.format(new Date(Long.valueOf(sb.toString()))));
-                    } catch (Exception ex) {
-                    }
-                }
+            if (sb.length() != 0) {
                 row.getCell(currentOffset).writeString(sb.toString());
             }
         }
