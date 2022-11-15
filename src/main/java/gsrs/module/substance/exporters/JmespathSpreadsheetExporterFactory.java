@@ -56,7 +56,11 @@ public class JmespathSpreadsheetExporterFactory implements ExporterFactory {
         JmespathSpreadsheetExporter.Builder builder = new JmespathSpreadsheetExporter.Builder(spreadsheet);
         for (Map<String, String> columnExpression : columnExpressions) {
             String columnName = columnExpression.get("name");
-            ColumnValueRecipe<JsonNode> recipe = JmespathColumnValueRecipe.create(columnName, columnExpression.get("expression"), columnExpression.getOrDefault("delimiter", "|"));
+            ColumnValueRecipe<JsonNode> recipe = JmespathColumnValueRecipe.create(
+                columnName,
+                columnExpression.get("expression"),
+                columnExpression.getOrDefault("delimiter", "|"),
+                columnExpression.getOrDefault("datetime", null));
             builder = builder.addColumn(columnName, recipe);
         }
         return builder.build();

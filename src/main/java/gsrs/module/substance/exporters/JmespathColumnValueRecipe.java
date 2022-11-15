@@ -1,14 +1,13 @@
 package gsrs.module.substance.exporters;
 
-import java.util.Objects;
-
 import com.fasterxml.jackson.databind.JsonNode;
-
 import io.burt.jmespath.JmesPath;
 import io.burt.jmespath.Expression;
 import io.burt.jmespath.jackson.JacksonRuntime;
-
 import ix.ginas.exporters.*;
+import java.util.Date;
+import java.util.Objects;
+import java.text.SimpleDateFormat;
 
 /**
  * Created by Egor Puzanov on 11/8/21.
@@ -18,23 +17,31 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
     private final String columnName;
     private final Expression<JsonNode> expression;
     private final String delimiter;
+    private final SimpleDateFormat datetime;
 
-    public JmespathColumnValueRecipe(String columnName, Expression<JsonNode> expression, String delimiter) {
+    public JmespathColumnValueRecipe(String columnName, Expression<JsonNode> expression, String delimiter, SimpleDateFormat datetime) {
         Objects.requireNonNull(columnName);
         Objects.requireNonNull(expression);
         Objects.requireNonNull(delimiter);
         this.columnName = columnName;
         this.expression = expression;
         this.delimiter = delimiter;
+        this.datetime = datetime;
     }
 
-    static <T>  ColumnValueRecipe<T> create(Enum<?> enumValue, String expression, String delimiter) {
-        return create(enumValue.name(), expression, delimiter);
+    static <T>  ColumnValueRecipe<T> create(Enum<?> enumValue, String expression, String delimiter, String datetime) {
+        return create(enumValue.name(), expression, delimiter, datetime);
     }
 
-    static <T>  ColumnValueRecipe<T> create(String columnName, String expression, String delimiter) {
+    static <T>  ColumnValueRecipe<T> create(String columnName, String expression, String delimiter, String datetime) {
         JmesPath<JsonNode> jmespath = new JacksonRuntime();
-        return new JmespathColumnValueRecipe<T>(columnName, jmespath.compile(expression), delimiter);
+        SimpleDateFormat dtf;
+        try {
+            dtf = new SimpleDateFormat(datetime);
+        } catch (Exception ex) {
+            dtf = null;
+        }
+        return new JmespathColumnValueRecipe<T>(columnName, jmespath.compile(expression), delimiter, dtf);
     }
 
     @Override
@@ -56,6 +63,12 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
                 }
             }
             if (sb.length()!=0) {
+                if (datetime != null) {
+                    try {
+                        sb.replace(0, sb.length(), datetime.format(new Date(Long.valueOf(sb.toString()))));
+                    } catch (Exception ex) {
+                    }
+                }
                 row.getCell(currentOffset).writeString(sb.toString());
             }
         }
@@ -79,7 +92,7 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
         Objects.requireNonNull(newName);
 
         if(containsColumnName(oldName)){
-            return new JmespathColumnValueRecipe<>(newName, expression, delimiter);
+            return new JmespathColumnValueRecipe<>(newName, expression, delimiter, datetime);
         }
         return this;
     }

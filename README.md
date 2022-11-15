@@ -77,9 +77,10 @@ ix.ginas.export.exporterfactories.substances += {
             {"name":"MPNS", "expression":"codes[?codeSystem=='MPNS'].code"},
             {"name":"GRIN", "expression":"codes[?codeSystem=='GRIN'].code"},
             {"name":"INGREDIENT_TYPE", "expression":"relationships[?contains(['IONIC MOIETY', 'MOLECULAR FRAGMENT', 'UNSPECIFIED INGREDIENT', 'SPECIFIED SUBSTANCE'], type)].type || 'INGREDIENT SUBSTANCE'"},
-            {"name":"PROTEIN_SEQUENCE", "expression":"protein.subunits[].sequence","delimiter":"|"},
-            {"name":"NUCLEIC_ACID_SEQUENCE", "expression":"nucleicAcid.subunits[].sequence","delimiter":"|"},
-            {"name":"RECORD_ACCESS_GROUPS", "expression":"access","delimiter":"|"}
+            {"name":"PROTEIN_SEQUENCE", "expression":"protein.subunits[].sequence", "delimiter":"|"},
+            {"name":"NUCLEIC_ACID_SEQUENCE", "expression":"nucleicAcid.subunits[].sequence", "delimiter":"|"},
+            {"name":"RECORD_ACCESS_GROUPS", "expression":"access", "delimiter":"|"},
+            {"name":"LAST_EDITED", "expression":"lastEdited", "datetime":"yyyy-MM-dd HH:mm:ss"}
         ]
     }
 }
