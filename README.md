@@ -102,7 +102,6 @@ ix.ginas.export.exporterfactories.substances += {
             "extension": "gsrsp",
             "displayName": "Json Portable Export (gsrsp) File"
         },
-        "gsrsVersion": "3.0.2",
         "sign": false,
         "shouldCompress": true
     }

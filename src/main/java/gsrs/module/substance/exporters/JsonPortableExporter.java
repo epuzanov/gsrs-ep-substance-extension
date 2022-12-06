@@ -11,6 +11,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import gsrs.module.substance.utils.JoseUtil;
 import ix.core.controllers.EntityFactory;
 import ix.ginas.exporters.Exporter;
+import ix.ginas.exporters.ExporterFactory;
 import ix.ginas.models.v1.Substance;
 
 import java.io.BufferedWriter;
@@ -31,29 +32,35 @@ import java.util.Objects;
  * Created by epuzanov on 8/30/21.
  */
 public class JsonPortableExporter implements Exporter<Substance> {
-    private final BufferedWriter out;
 
+    private final BufferedWriter out;
     private static final String LEADING_HEADER= "\t\t";
+    private static final JoseUtil joseUtil = JoseUtil.getInstance();
     private final ObjectWriter writer =  EntityFactory.EntityMapper.FULL_ENTITY_MAPPER().writer();
     private final List<String> fieldsToRemove;
     private final String gsrsVersion;
     private final boolean sign;
+    private final ExporterFactory.Parameters parameters;
 
-    public JsonPortableExporter(OutputStream out, List<String> fieldsToRemove, boolean sign, String gsrsVersion) throws IOException{
+    public JsonPortableExporter(OutputStream out, ExporterFactory.Parameters parameters, List<String> fieldsToRemove, boolean sign, String gsrsVersion) throws IOException{
         Objects.requireNonNull(out);
         this.out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
+        this.parameters = parameters;
+        this.fieldsToRemove = fieldsToRemove;
         this.sign = sign;
         this.gsrsVersion = gsrsVersion;
-        this.fieldsToRemove = fieldsToRemove;
     }
 
     @Override
     public void export(Substance obj) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode tree = mapper.readTree(writer.writeValueAsString(obj));
-        out.write(LEADING_HEADER);
-        out.write(this.makePortable(tree));
-        out.newLine();
+        String line = this.makePortable(tree);
+        if (line != null && !line.isEmpty()) {
+            out.write(LEADING_HEADER);
+            out.write(line);
+            out.newLine();
+        }
     }
 
     @Override
@@ -62,24 +69,29 @@ public class JsonPortableExporter implements Exporter<Substance> {
     }
 
     private String makePortable(JsonNode tree) {
+        ObjectNode metadata = buildMetadata(tree);
         deleteValidationNotes((ObjectNode) tree);
         uuidToIndex(tree);
         scrub(tree);
         checkAccess(tree);
-        addMetadata(tree);
+        if (tree.size() == 0) {
+            return null;
+        }
+        ((ObjectNode) tree).set("_metadata", metadata);
         String out = tree.toString();
         if (sign) {
-            out = JoseUtil.getInstance().sign(out);
+            out = joseUtil.sign(out);
         }
         return out;
     }
 
-    private void addMetadata(JsonNode tree) {
+    private ObjectNode buildMetadata(JsonNode tree) {
         ObjectNode metadata = JsonNodeFactory.instance.objectNode();
         metadata.set("ori", new TextNode(tree.hasNonNull("_self") ? tree.get("_self").asText() : "Unknown"));
         metadata.set("ver", new TextNode(gsrsVersion));
         metadata.set("dat", new TextNode(ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT)));
-        ((ObjectNode) tree).set("_metadata", metadata);
+        metadata.set("usr", new TextNode(parameters.getUsername()));
+        return metadata;
     }
 
     private void uuidToIndex (JsonNode node) {

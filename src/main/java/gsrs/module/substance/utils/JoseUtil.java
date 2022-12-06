@@ -66,6 +66,9 @@ public class JoseUtil {
     }
 
     private static String findPrivateKeyId () {
+        if (jwks.size() == 0) {
+            return null;
+        }
         return  jwks.getKeys()
                     .stream()
                     .filter(k->k.getKeyProperty(JsonWebKey.RSA_PRIVATE_EXP) != null)

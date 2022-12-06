@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import gsrs.buildInfo.BuildInfoFetcher;
 import ix.ginas.exporters.Exporter;
 import ix.ginas.exporters.ExporterFactory;
 import ix.ginas.exporters.OutputFormat;
@@ -19,6 +20,7 @@ import java.util.Set;
 import java.util.zip.GZIPOutputStream;
 
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Created by epuzanov on 8/30/21.
@@ -26,11 +28,13 @@ import lombok.Data;
 @Data
 public class JsonPortableExporterFactory implements ExporterFactory{
 
+    @Autowired
+    private BuildInfoFetcher buildInfoFetcher;
+
     private OutputFormat format = new OutputFormat("gsrsp", "Json Portable Export (gsrsp) File");
     private List<String> fieldsToRemove  = Arrays.asList("_name","_nameHTML","_formulaHTML","_approvalIDDisplay","_isClassification","_self","self","approvalID","approved","approvedBy","changeReason","created","createdBy","lastEdited","lastEditedBy","deprecated","uuid","refuuid","originatorUuid","linkingID","id","documentDate","status","version");
     private boolean shouldCompress = true;
-    private String gsrsVersion = "3.0.3";
-    private boolean sign = false;
+    private boolean sign = true;
 
     public void setFormat(Map<String, String> m) {
         this.format = new OutputFormat(m.get("extension"), m.get("displayName"));
@@ -42,10 +46,6 @@ public class JsonPortableExporterFactory implements ExporterFactory{
 
     public void setSign(boolean sign) {
         this.sign = sign;
-    }
-
-    public void setGsrsVersion(String gsrsVersion) {
-        this.gsrsVersion = gsrsVersion;
     }
 
     public void setFieldsToRemove(Map<String, String> fieldsToRemove) {
@@ -64,15 +64,31 @@ public class JsonPortableExporterFactory implements ExporterFactory{
 
     @Override
     public Exporter<Substance> createNewExporter(OutputStream out, Parameters params) throws IOException {
+        JsonNode detailedParameters = params.detailedParameters();
+        String gsrsVersion = buildInfoFetcher.getBuildInfo().getVersion();
         if(shouldCompress) {
-            return new JsonPortableExporter(new GZIPOutputStream(out), fieldsToRemove, sign, gsrsVersion);
+            return new JsonPortableExporter(new GZIPOutputStream(out), params, fieldsToRemove, sign, gsrsVersion);
         }
-        return new JsonPortableExporter(out, fieldsToRemove, sign, gsrsVersion);
+        return new JsonPortableExporter(out, params, fieldsToRemove, sign, gsrsVersion);
     }
 
     @Override
     public JsonNode getSchema() {
         ObjectNode parameters = JsonNodeFactory.instance.objectNode();
-        return parameters;
+        ObjectNode shouldCompress = JsonNodeFactory.instance.objectNode();
+        shouldCompress.put("type", "boolean");
+        shouldCompress.put("title", "Should Compress?");
+        shouldCompress.put("comments", "Compress output file");
+        shouldCompress.put("default", true);
+        parameters.set("shouldCompress", shouldCompress);
+
+        ObjectNode sign = JsonNodeFactory.instance.objectNode();
+        sign.put("type", "boolean");
+        sign.put("title", "Sign Substances?");
+        sign.put("comments", "Sign exported substances");
+        sign.put("default", true);
+        parameters.set("sign", sign);
+
+        return generateSchemaNode("GSRS Portable File Exporter Parameters", parameters);
     }
 }
