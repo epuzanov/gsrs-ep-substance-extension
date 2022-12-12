@@ -40,61 +40,44 @@ import org.apache.cxf.rs.security.jose.jws.JwsHeaders;
 import org.apache.cxf.rs.security.jose.jws.JwsSignatureProvider;
 import org.apache.cxf.rs.security.jose.jws.JwsUtils;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
 /**
  *
  * @author Egor Puzanov
  */
 
 @Slf4j
+@Component
 public class JoseUtil {
-    private static final JsonWebKeys jwks = loadJwks("export.jwks");
-    private static final String privateKeyId = findPrivateKeyId();
-    private static final ContentAlgorithm enc = ContentAlgorithm.A256GCM;
-    private static final KeyAlgorithm alg = KeyAlgorithm.RSA_OAEP;
-    private static final SignatureAlgorithm sig = SignatureAlgorithm.RS256;
-    private static final JoseUtil INSTANCE = new JoseUtil();
+
+    @Autowired
+    private JoseUtilConfiguration config;
+    private static JoseUtil INSTANCE = new JoseUtil();
 
     private JoseUtil() {
-    }
-
-    private static JsonWebKeys loadJwks(String fileName) {
-        try {
-            return JwkUtils.readJwkSet(new String(Files.readAllBytes(Paths.get(fileName))));
-        } catch (Exception e) {
-            return new JsonWebKeys();
-        }
-    }
-
-    private static String findPrivateKeyId () {
-        if (jwks.size() == 0) {
-            return null;
-        }
-        return  jwks.getKeys()
-                    .stream()
-                    .filter(k->k.getKeyProperty(JsonWebKey.RSA_PRIVATE_EXP) != null)
-                    .map(k->k.getKeyId())
-                    .findFirst()
-                    .orElse(null);
     }
 
     public static JoseUtil getInstance() {
         return INSTANCE;
     }
 
-    public static String sign(String str) {
+    public String sign(String str) {
         JwsHeaders protectedHeaders = new JwsHeaders();
-        protectedHeaders.setKeyId(privateKeyId);
-        protectedHeaders.setContentType("application/json");
+        JsonWebKey privateKey = config.getPrivateKey();
         try {
+            protectedHeaders.setKeyId(privateKey.getKeyId());
+            protectedHeaders.setContentType("application/json");
             JwsCompactProducer jwsProducer = new JwsCompactProducer(protectedHeaders, str);
-            JwsSignatureProvider jwsp = JwsUtils.getSignatureProvider(jwks.getKey(privateKeyId), sig);
+            JwsSignatureProvider jwsp = JwsUtils.getSignatureProvider(privateKey, config.getSig());
             str = jwsProducer.signWith(jwsp);
         } catch (Exception e) {
         }
         return str;
     }
 
-    public static ObjectNode verify(String jwsCompactStr) {
+    public ObjectNode verify(String jwsCompactStr) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         JwsCompactConsumer jwsConsumer = new JwsCompactConsumer(jwsCompactStr);
@@ -102,7 +85,7 @@ public class JoseUtil {
             JwsHeaders headers = jwsConsumer.getJwsHeaders();
             result = (ObjectNode) mapper.readTree(jwsConsumer.getDecodedJwsPayloadBytes());
             if (result.has("_metadata")) {
-                boolean verified = jwsConsumer.verifySignatureWith(jwks.getKey(headers.getKeyId()), headers.getSignatureAlgorithm());
+                boolean verified = jwsConsumer.verifySignatureWith(config.getKey(headers.getKeyId()), headers.getSignatureAlgorithm());
                 ((ObjectNode) result.get("_metadata")).set("verified", JsonNodeFactory.instance.booleanNode(verified));
             }
         } catch (Exception e) {
@@ -110,28 +93,29 @@ public class JoseUtil {
         return result;
     }
 
-    public static void encrypt(ObjectNode node) {
+    public void encrypt(ObjectNode node) {
         JsonWebKey key;
         KeyEncryptionProvider keyEncryption;
         ObjectMapper mapper = new ObjectMapper();
         JsonNode result = JsonNodeFactory.instance.objectNode();
-        JweHeaders protectedHeaders = new JweHeaders(enc);
+        JweHeaders protectedHeaders = new JweHeaders(config.getEnc());
         protectedHeaders.setType(JoseType.JOSE_JSON);
         JweHeaders sharedUnprotectedHeaders = new JweHeaders();
-        sharedUnprotectedHeaders.setKeyEncryptionAlgorithm(alg);
-        ContentEncryptionProvider contentEncryption = JweUtils.getContentEncryptionProvider(enc, true);
+        sharedUnprotectedHeaders.setKeyEncryptionAlgorithm(config.getAlg());
+        ContentEncryptionProvider contentEncryption = JweUtils.getContentEncryptionProvider(config.getEnc(), true);
         List<JweEncryptionProvider> jweProviders = new LinkedList<JweEncryptionProvider>();
         List<JweHeaders> perRecipientHeades = new LinkedList<JweHeaders>();
-        if (privateKeyId != null && node.get("access").findValue(privateKeyId) == null) {
-            keyEncryption = JweUtils.getKeyEncryptionProvider(jwks.getKey(privateKeyId), alg);
+        JsonWebKey privateKey = config.getPrivateKey();
+        if (privateKey != null && node.get("access").findValue(privateKey.getKeyId()) == null) {
+            keyEncryption = JweUtils.getKeyEncryptionProvider(privateKey, config.getAlg());
             jweProviders.add(new JweEncryption(keyEncryption, contentEncryption));
-            perRecipientHeades.add(new JweHeaders(privateKeyId));
+            perRecipientHeades.add(new JweHeaders(privateKey.getKeyId()));
         }
         Iterator<JsonNode> it = node.get("access").elements();
         while (it.hasNext()) {
-            key = jwks.getKey(it.next().asText());
+            key = config.getKey(it.next().asText());
             if (key != null) {
-                keyEncryption = JweUtils.getKeyEncryptionProvider(key, alg);
+                keyEncryption = JweUtils.getKeyEncryptionProvider(key, config.getAlg());
                 jweProviders.add(new JweEncryption(keyEncryption, contentEncryption));
                 perRecipientHeades.add(new JweHeaders(key.getKeyId()));
             }
@@ -153,17 +137,18 @@ public class JoseUtil {
         }
     }
 
-    public static void decrypt(ObjectNode node) {
+    public void decrypt(ObjectNode node) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectNode result = JsonNodeFactory.instance.objectNode();
         JweJsonConsumer consumer = new JweJsonConsumer(node.toString());
         node.removeAll();
+        JsonWebKey privateKey = config.getPrivateKey();
         try {
             KeyAlgorithm keyAlgo = consumer.getSharedUnprotectedHeader().getKeyEncryptionAlgorithm();
             ContentAlgorithm ctAlgo = consumer.getProtectedHeader().getContentEncryptionAlgorithm();
-            JweDecryptionProvider jwe = JweUtils.createJweDecryptionProvider(JweUtils.getKeyDecryptionProvider(jwks.getKey(privateKeyId), keyAlgo), ctAlgo);
+            JweDecryptionProvider jwe = JweUtils.createJweDecryptionProvider(JweUtils.getKeyDecryptionProvider(privateKey, keyAlgo), ctAlgo);
             for (JweJsonEncryptionEntry encEntry : consumer.getRecipients()) {
-                if (privateKeyId.equals(encEntry.getUnprotectedHeader().getKeyId())) {
+                if (privateKey.getKeyId().equals(encEntry.getUnprotectedHeader().getKeyId())) {
                     result = (ObjectNode) mapper.readTree(consumer.decryptWith(jwe, encEntry).getContent());
                     break;
                 }

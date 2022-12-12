@@ -95,6 +95,16 @@ The JsonPortableExporter can be used for exporting substances in the GSRS portab
 #### Configuration
 
 ```
+gsrs.crypto = {
+    "jwks": {
+        "filename": "keystore.jwks"
+    }
+    "privateKeyId": "SELF",
+    "enc": "A256GCM",
+    "alg": "RSA-OAEP",
+    "sig": "RS256"
+}
+
 ix.ginas.export.exporterfactories.substances += {
     "exporterFactoryClass": "gsrs.module.substance.exporters.JsonPortableExporterFactory",
     "parameters": {
