@@ -40,6 +40,11 @@
             <optional>true</optional>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-xml</artifactId>
+            <version>2.13.2</version>
+        </dependency>
+        <dependency>
             <groupId>io.burt</groupId>
             <artifactId>jmespath-core</artifactId>
             <version>${jmespath.version}</version>
