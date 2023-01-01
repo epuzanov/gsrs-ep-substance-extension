@@ -29,8 +29,11 @@ ix.ginas.export.exporterfactories.substances += {
             "displayName": "Send to ..."
         },
         "headers": {
-            "auth-username": "admin",
-            "auth-password": "admin"
+            #"auth-username": "admin",
+            #"auth-password": "admin",
+            #"AUTHENTICATION_HEADER_NAME_EMAIL": "{{user.email}}",
+            "auth-username": "{{user.name}}",
+            "auth-key": "{{user.apikey}}"
         },
         "baseUrl": "https://public.gsrs.test/api/v1/substances",
         "timeout": 120000,
@@ -96,13 +99,15 @@ The JsonPortableExporter can be used for exporting substances in the GSRS portab
 
 ```
 gsrs.crypto = {
-    "jwks": {
-        "filename": "keystore.jwks"
-    }
-    "privateKeyId": "SELF",
-    "enc": "A256GCM",
-    "alg": "RSA-OAEP",
-    "sig": "RS256"
+    #"jsonWebKeys": { include "file:///etc/gsrs/conf/keystore.jwks.json" },
+    "jsonWebKeys": { "filename": "keystore.jwks" },
+    "privateKeyId": "NCATS",
+    "contentAlgorithm": "A256GCM",
+    "keyAlgorithm": "RSA_OAEP",
+    "signatureAlgorithm": "RS256",
+    "strictVerification": false,
+    "preserveMetadata": true,
+    "dateFormat": "yyyy-MM-dd HH:mm:ss"
 }
 
 ix.ginas.export.exporterfactories.substances += {
@@ -112,8 +117,7 @@ ix.ginas.export.exporterfactories.substances += {
             "extension": "gsrsp",
             "displayName": "Json Portable Export (gsrsp) File"
         },
-        "sign": false,
-        "shouldCompress": true
+        "originBase": "https://srs.public.instance.name/ginas/app/beta/substances/"
     }
 }
 ```
