@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import gsrs.repository.UserProfileRepository;
+import ix.core.models.UserProfile;
 import ix.ginas.exporters.Exporter;
 import ix.ginas.exporters.ExporterFactory;
 import ix.ginas.exporters.OutputFormat;
@@ -30,6 +32,7 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
@@ -41,6 +44,9 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GsrsApiExporterFactory implements ExporterFactory {
+
+    @Autowired
+    private UserProfileRepository userProfileRepository;
 
     private OutputFormat format = new OutputFormat("gsrsapi", "Send to ...");
     private int timeout = 120000;
@@ -62,6 +68,27 @@ public class GsrsApiExporterFactory implements ExporterFactory {
         }
     };
 
+    private Map<String, String> getHeaders(UserProfile profile) {
+        Map<String, String> userHeaders = new HashMap<String, String>();
+        for (Map.Entry<String, String> entry : headers.entrySet()) {
+            String value = entry.getValue();
+            switch(value) {
+                case "{{user.name}}":
+                    value = profile.getIdentifier();
+                    break;
+                case "{{user.email}}":
+                    value = profile.user.email;
+                    break;
+                case "{{user.apikey}}":
+                    value = profile.getKey();
+                    break;
+                default:
+                    break;
+            }
+            userHeaders.put(entry.getKey(), value);
+        }
+        return userHeaders;
+    }
 
     public void setFormat(Map<String, String> m) {
         this.format = new OutputFormat(m.get("extension"), m.get("displayName"));
@@ -117,7 +144,8 @@ public class GsrsApiExporterFactory implements ExporterFactory {
         ClientHttpRequestFactory clientFactory = new HttpComponentsClientHttpRequestFactory(client.build());
         RestTemplate restTemplate = new RestTemplate(clientFactory);
         restTemplate.setUriTemplateHandler(new DefaultUriBuilderFactory(baseUrl));
-        return new GsrsApiExporter(out, restTemplate, headers, validate);
+        UserProfile profile = userProfileRepository.findByUser_UsernameIgnoreCase(params.getUsername());
+        return new GsrsApiExporter(out, restTemplate, getHeaders(profile), validate);
     }
 
     @Override

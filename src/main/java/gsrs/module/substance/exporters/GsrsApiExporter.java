@@ -45,6 +45,7 @@ public class GsrsApiExporter implements Exporter<Substance> {
         }
         this.headers = h;
         this.validate = validate;
+        log.debug("BaseUrl: " + restTemplate.getUriTemplateHandler().expand("/") + " Headers: " + h.toString());
     }
 
     private HttpEntity<String> makeRequest(Substance obj) throws Exception {
