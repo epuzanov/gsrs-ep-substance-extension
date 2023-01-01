@@ -8,7 +8,8 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
-import gsrs.module.substance.utils.JoseUtil;
+import gsrs.buildInfo.BuildInfoFetcher;
+import gsrs.module.substance.services.JoseCryptoService;
 import ix.core.controllers.EntityFactory;
 import ix.ginas.exporters.Exporter;
 import ix.ginas.exporters.ExporterFactory;
@@ -18,37 +19,38 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.time.format.DateTimeFormatter;
-import java.time.ZonedDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Created by epuzanov on 8/30/21.
  */
 public class JsonPortableExporter implements Exporter<Substance> {
 
+    @Autowired
+    private BuildInfoFetcher buildInfoFetcher;
+
+    private static final JoseCryptoService joseCryptoService = JoseCryptoService.INSTANCE();
+
     private final BufferedWriter out;
     private static final String LEADING_HEADER= "\t\t";
-    private static final JoseUtil joseUtil = JoseUtil.getInstance();
     private final ObjectWriter writer =  EntityFactory.EntityMapper.FULL_ENTITY_MAPPER().writer();
     private final List<String> fieldsToRemove;
-    private final String gsrsVersion;
-    private final boolean sign;
+    private final String originBase;
     private final ExporterFactory.Parameters parameters;
 
-    public JsonPortableExporter(OutputStream out, ExporterFactory.Parameters parameters, List<String> fieldsToRemove, boolean sign, String gsrsVersion) throws IOException{
+    public JsonPortableExporter(OutputStream out, ExporterFactory.Parameters parameters, List<String> fieldsToRemove, String originBase) throws IOException{
         Objects.requireNonNull(out);
         this.out = new BufferedWriter(new OutputStreamWriter(out, "UTF-8"));
         this.parameters = parameters;
         this.fieldsToRemove = fieldsToRemove;
-        this.sign = sign;
-        this.gsrsVersion = gsrsVersion;
+        this.originBase = originBase;
     }
 
     @Override
@@ -69,28 +71,23 @@ public class JsonPortableExporter implements Exporter<Substance> {
     }
 
     private String makePortable(JsonNode tree) {
-        ObjectNode metadata = buildMetadata(tree);
+        Map<String, Object> metadata = buildMetadata(tree);
         deleteValidationNotes((ObjectNode) tree);
         uuidToIndex(tree);
         scrub(tree);
-        checkAccess(tree);
+        joseCryptoService.protect(tree);
         if (tree.size() == 0) {
             return null;
         }
-        ((ObjectNode) tree).set("_metadata", metadata);
-        String out = tree.toString();
-        if (sign) {
-            out = joseUtil.sign(out);
-        }
-        return out;
+        return joseCryptoService.sign(tree.toString(), metadata);
     }
 
-    private ObjectNode buildMetadata(JsonNode tree) {
-        ObjectNode metadata = JsonNodeFactory.instance.objectNode();
-        metadata.set("ori", new TextNode(tree.hasNonNull("_self") ? tree.get("_self").asText() : "Unknown"));
-        metadata.set("ver", new TextNode(gsrsVersion));
-        metadata.set("dat", new TextNode(ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT)));
-        metadata.set("usr", new TextNode(parameters.getUsername()));
+    private Map<String, Object> buildMetadata(JsonNode tree) {
+        Map<String, Object> metadata = new HashMap<String, Object>();
+        metadata.put("ori", originBase != null ? originBase + tree.get("uuid").asText() : tree.get("_self").asText());
+        metadata.put("ver", buildInfoFetcher.getBuildInfo().getVersion());
+        metadata.put("dat", new Date().getTime());
+        metadata.put("usr", parameters.getUsername());
         return metadata;
     }
 
@@ -138,24 +135,6 @@ public class JsonPortableExporter implements Exporter<Substance> {
                 }
             }
             node.set("references", references);
-        }
-    }
-
-    private static void checkAccess (JsonNode node) {
-        if (node.isObject()) {
-            Iterator<String> it = node.fieldNames();
-            while (it.hasNext()) {
-                String key = it.next();
-                checkAccess(node.get(key));
-            }
-            if (node.has("access") && node.get("access").has(0)) {
-                JoseUtil.getInstance().encrypt((ObjectNode)node);
-            }
-        } else if (node.isArray()) {
-            Iterator<JsonNode> it = node.elements();
-            while (it.hasNext()) {
-                checkAccess(it.next());
-            }
         }
     }
 

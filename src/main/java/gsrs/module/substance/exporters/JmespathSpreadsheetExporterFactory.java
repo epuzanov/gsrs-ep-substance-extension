@@ -1,5 +1,6 @@
 package gsrs.module.substance.exporters;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  * Created by Egor Puzanov.
  */
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class JmespathSpreadsheetExporterFactory implements ExporterFactory {
 
     private OutputFormat format = new OutputFormat("custom.xlsx", "Custom Report (xlsx) File");

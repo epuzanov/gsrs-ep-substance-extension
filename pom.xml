@@ -17,8 +17,8 @@
         <log4j2.version>2.17.2</log4j2.version>
         <jmespath.version>0.5.1</jmespath.version>
         <httpclient.version>4.5.13</httpclient.version>
-        <jose.version>3.5.3</jose.version>
-        <lombok.version>1.18.20</lombok.version>
+        <jose.version>4.0.0</jose.version>
+        <lombok.version>1.18.22</lombok.version>
     </properties>
 
     <dependencies>

@@ -1,5 +1,6 @@
 package gsrs.module.substance.exporters;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -38,6 +39,7 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 /**
  * Created by Egor Puzanov on 10/18/22.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class GsrsApiExporterFactory implements ExporterFactory {
 
     private OutputFormat format = new OutputFormat("gsrsapi", "Send to ...");
