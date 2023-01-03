@@ -15,23 +15,116 @@ import ix.core.search.text.IndexableValue;
 import ix.ginas.models.v1.Substance;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Created by Egor Puzanov on 9/10/2021.
  */
-
+@Slf4j
 public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
 
-    private List<Expression<JsonNode>> expressions = new ArrayList<Expression<JsonNode>>();
+    private List<IndexExpression> expressions = new ArrayList<IndexExpression>();
     private final ObjectWriter writer = EntityFactory.EntityMapper.FULL_ENTITY_MAPPER().writer();
-    public String replacement = "$1";
-    public String regex;
+
+    private class IndexExpression {
+        private final String index;
+        private final List<String> ranges;
+        private final Expression<JsonNode> expression;
+        private final Pattern regex;
+        private final String replacement;
+        private final String delimiter;
+        private final String format;
+        private final boolean suggestable;
+        private final boolean sortable;
+
+        public IndexExpression(Map<String, String> m) {
+            JmesPath<JsonNode> jmespath = new JacksonRuntime();
+            this.ranges = Arrays.asList(m.getOrDefault("ranges", "").split(" "));
+            this.expression = (Expression<JsonNode>) jmespath.compile(m.get("expression"));
+            this.regex = Pattern.compile(m.getOrDefault("regex", ""));
+            this.replacement = m.getOrDefault("replacement", "$1");
+            this.delimiter = m.getOrDefault("delimiter", "");
+            this.format = m.get("format");
+            this.suggestable = Boolean.valueOf(m.getOrDefault("suggestable", "false")).booleanValue();
+            this.sortable = Boolean.valueOf(m.getOrDefault("sortable", "false")).booleanValue();
+            this.index = m.get("index");
+        }
+
+        public boolean isValid() {
+            if (index == null || expression == null) {
+                return false;
+            }
+            return true;
+        }
+
+        public void createIndexableValues(JsonNode tree, Consumer<IndexableValue> consumer) {
+            IndexableValue iv = null;
+            try {
+                JsonNode results = expression.search(tree);
+                log.debug("Results: " + results.toString());
+                for(JsonNode result: (ArrayNode)results){
+                    if (result.isValueNode() && ! result.isNull()) {
+                        if (result.isDouble()) {
+                            if (ranges != null && !ranges.isEmpty()) {
+                                log.debug("Index: " + index + " FacetDoubleValue: " + result.asText());
+                                iv = IndexableValue.simpleFacetDoubleValue(index, result.asDouble(),
+                                    ranges.stream().mapToDouble(Double::valueOf).toArray());
+                            } else {
+                                log.debug("Index: " + index + " DoubleValue: " + result.asText());
+                                iv = IndexableValue.simpleDoubleValue(index, result.asDouble());
+                            }
+                        } else if (result.isNumber()) {
+                            if (ranges != null && !ranges.isEmpty()) {
+                                log.debug("Index: " + index + " FacetLongValue: " + result.asText());
+                                iv = IndexableValue.simpleFacetLongValue(index, result.asLong(),
+                                    ranges.stream().mapToLong(Long::valueOf).toArray());
+                            } else {
+                                log.debug("Index: " + index + " LongValue: " + result.asText());
+                                iv = IndexableValue.simpleLongValue(index, result.asLong());
+                            }
+                        } else {
+                            String value = result.asText(null);
+                            if (!regex.pattern().isEmpty()) {
+                                log.debug("Index: " + index + " Value before regex: " + value);
+                                value = regex.matcher(value).replaceAll(replacement);
+                                log.debug("Index: " + index + " Value after regex: " + value);
+                            }
+                            if (value != null && !value.isEmpty()) {
+                                if (index.startsWith("root_")) {
+                                    log.debug("Index: " + index + " StringValue: " + value);
+                                    iv = IndexableValue.simpleStringValue(index, value);
+                                } else {
+                                    log.debug("Index: " + index + " FacetStringValue: " + value);
+                                    iv = IndexableValue.simpleFacetStringValue(index, value);
+                                }
+                            }
+                        }
+                        if (format != null && !format.isEmpty()) {
+                            iv = iv.setFormat(format);
+                        }
+                        if (suggestable) {
+                            iv = iv.suggestable();
+                        }
+                        if (sortable) {
+                            iv = iv.setSortable();
+                        }
+                        consumer.accept(iv);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
 
     @Override
     public Class<Substance> getIndexedEntityClass() {
@@ -44,49 +137,20 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
         try {
             JsonNode tree = mapper.readTree(writer.writeValueAsString(substance));
             updateReferences(tree);
-            for (Expression<JsonNode> expression: expressions) {
-                JsonNode results = expression.search(tree);
-                if (!results.isArray()) {
-                    results = mapper.createArrayNode().add(results);
-                }
-                for (JsonNode result: results) {
-                    Iterator<Map.Entry<String, JsonNode>> fields = result.fields();
-                    while (fields.hasNext()) {
-                        Map.Entry<String, JsonNode> field = fields.next();
-                        String key = field.getKey();
-                        String value = field.getValue().asText(null);
-                        if (regex != null) {
-                            try {
-                                value = value.replaceAll(regex, replacement);
-                            } catch (Exception e) {}
-                        }
-                        if (key == null || key.isEmpty() || value == null || value.isEmpty()) {
-                            continue;
-                        } else if (key.startsWith("root_")) {
-                            consumer.accept(IndexableValue.simpleStringValue(key, value));
-                        } else {
-                            consumer.accept(IndexableValue.simpleFacetStringValue(key, value));
-                        }
-                    }
-                }
+            for (IndexExpression expression: expressions) {
+                expression.createIndexableValues(tree, consumer);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public List<Expression<JsonNode>> getExpressions() {
-        return this.expressions;
-    }
-
-    public void setExpressions(LinkedHashMap<Integer, String> expressions) {
-        JmesPath<JsonNode> jmespath = new JacksonRuntime();
+    public void setExpressions(LinkedHashMap<Integer, Map<String, String>> expressions) {
         this.expressions.clear();
-        for (String expression: expressions.values()) {
-            try {
-                this.expressions.add((Expression<JsonNode>) jmespath.compile(expression));
-            } catch (Exception e) {
-                e.printStackTrace();
+        for (Map<String, String> expression: expressions.values()) {
+            IndexExpression expr = new IndexExpression(expression);
+            if (expr.isValid()) {
+                this.expressions.add(expr);
             }
         }
     }
