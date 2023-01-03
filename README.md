@@ -122,7 +122,7 @@ ix.ginas.export.exporterfactories.substances += {
 }
 ```
 
-### gsrs.module.substance.indexers.JmespathIndexvalueMaker
+### gsrs.module.substance.indexers.JmespathIndexValueMaker
 The JmespathIndexvalueMaker canbe used for creating of the custom indexes. It uses Jmespath expressions to select values from substances json.
 
 #### Dependencies
@@ -136,19 +136,20 @@ gsrs.indexers.list += {
     "indexer" = "gsrs.module.substance.indexers.JmespathIndexValueMaker",
     "parameters" = {
         "expressions" = [
-            {"index":"ATC Level 1" ,"expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.([^\\Q|\\E]*).*"},
-            {"index":"ATC Level 2" ,"expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.[^\\Q|\\E]*.([^\\Q|\\E]*).*"},
-            {"index":"ATC Level 3" ,"expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.[^\\Q|\\E]*.[^\\Q|\\E]*.([^\\Q|\\E]*).*"},
-            {"index":"ATC Level 4" ,"expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.[^\\Q|\\E]*.[^\\Q|\\E]*.[^\\Q|\\E]*.([^\\Q|\\E]*).*"},
-            {"index":"Naming Orgs" ,"expression": "names[?type=='of'].nameOrgs[]"},
-            {"index":"Name TypeLang" ,"expression": "names[?type=='of'].languages[].join('_', ['of', @])"},
-            {"index":"Name TypeLang" ,"expression": "names[?type=='sys'].languages[].join('_', ['sys', @])"},
-            {"index":"Name TypeLang" ,"expression": "names[?type=='cn'].languages[].join('_', ['cn', @])"},
-            {"index":"Name TypeLang" ,"expression": "names[?type=='bn'].languages[].join('_', ['bn', @])"},
-            {"index":"Name TypeLang" ,"expression": "names[?type=='cd'].languages[].join('_', ['od', @])"},
-            {"index":"Reference Tags" ,"expression": "references[].tags[]"},
-            {"index":"Molecular Weight" ,"expression": "properties[?starts_with(name, 'MOL_WEIGHT')].floor(value.average)", "ranges": "0 200 400 600 800 1000", "format": "%1$.0f", "sortable":true},
-            {"index":"root_structure_mwt" ,"expression": "properties[?starts_with(name, 'MOL_WEIGHT')].value.average", "sortable":true}
+            {"index":"ATC Level 1", "expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.([^\\Q|\\E]*).*"},
+            {"index":"ATC Level 2", "expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.[^\\Q|\\E]*.([^\\Q|\\E]*).*"},
+            {"index":"ATC Level 3", "expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.[^\\Q|\\E]*.[^\\Q|\\E]*.([^\\Q|\\E]*).*"},
+            {"index":"ATC Level 4", "expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.[^\\Q|\\E]*.[^\\Q|\\E]*.[^\\Q|\\E]*.([^\\Q|\\E]*).*"},
+            {"index":"Naming Orgs", "expression": "names[?type=='of'].nameOrgs[]"},
+            {"index":"Name TypeLang", "expression": "names[?type=='of'].languages[].join('_', ['of', @])"},
+            {"index":"Name TypeLang", "expression": "names[?type=='sys'].languages[].join('_', ['sys', @])"},
+            {"index":"Name TypeLang", "expression": "names[?type=='cn'].languages[].join('_', ['cn', @])"},
+            {"index":"Name TypeLang", "expression": "names[?type=='bn'].languages[].join('_', ['bn', @])"},
+            {"index":"Name TypeLang", "expression": "names[?type=='cd'].languages[].join('_', ['od', @])"},
+            {"index":"Reference Tags", "expression": "references[].tags[]"},
+            {"index":"Molecular Weight", "expression": "properties[?starts_with(name, 'MOL_WEIGHT')].floor(value.average)", "ranges": "0 200 400 600 800 1000", "format": "%1$.0f", "sortable":true},
+            {"index":"root_structure_mwt", "type": "Double", "expression": "properties[?starts_with(name, 'MOL_WEIGHT')].value.average", "sortable":true},
+            {"index":"Deprecated", "expression": "[map(&'Deprecated',[deprecated][?@]),'Not Deprecated'][] | @[0]"}
         ]
     }
 }

@@ -36,6 +36,7 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
 
     private class IndexExpression {
         private final String index;
+        private final String type;
         private final List<String> ranges;
         private final Expression<JsonNode> expression;
         private final Pattern regex;
@@ -47,6 +48,7 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
 
         public IndexExpression(Map<String, String> m) {
             JmesPath<JsonNode> jmespath = new JacksonRuntime();
+            this.type = m.getOrDefault("type", "String");
             this.ranges = Arrays.asList(m.getOrDefault("ranges", "").split(" "));
             this.expression = (Expression<JsonNode>) jmespath.compile(m.get("expression"));
             this.regex = Pattern.compile(m.getOrDefault("regex", ""));
@@ -70,9 +72,12 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
             try {
                 JsonNode results = expression.search(tree);
                 log.debug("Results: " + results.toString());
+                if (!results.isArray()) {
+                    results = (JsonNode) new ObjectMapper().createArrayNode().add(results);
+                }
                 for(JsonNode result: (ArrayNode)results){
                     if (result.isValueNode() && ! result.isNull()) {
-                        if (result.isDouble()) {
+                        if (result.isDouble() || "Double".equals(type)) {
                             if (ranges != null && !ranges.isEmpty()) {
                                 log.debug("Index: " + index + " FacetDoubleValue: " + result.asText());
                                 iv = IndexableValue.simpleFacetDoubleValue(index, result.asDouble(),
@@ -81,7 +86,7 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
                                 log.debug("Index: " + index + " DoubleValue: " + result.asText());
                                 iv = IndexableValue.simpleDoubleValue(index, result.asDouble());
                             }
-                        } else if (result.isNumber()) {
+                        } else if (result.isNumber() || "Long".equals(type)) {
                             if (ranges != null && !ranges.isEmpty()) {
                                 log.debug("Index: " + index + " FacetLongValue: " + result.asText());
                                 iv = IndexableValue.simpleFacetLongValue(index, result.asLong(),
