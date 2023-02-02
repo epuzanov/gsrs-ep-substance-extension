@@ -3,7 +3,15 @@ package gsrs.module.substance.services;
 import gov.nih.ncats.common.util.CachedSupplier;
 import gsrs.springUtils.StaticContextAccessor;
 
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.InputStream;
+import java.net.URL;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,6 +21,7 @@ import javax.annotation.PostConstruct;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.cxf.rs.security.jose.common.JoseConstants;
 import org.apache.cxf.rs.security.jose.jwa.ContentAlgorithm;
 import org.apache.cxf.rs.security.jose.jwa.KeyAlgorithm;
 import org.apache.cxf.rs.security.jose.jwa.SignatureAlgorithm;
@@ -20,8 +29,10 @@ import org.apache.cxf.rs.security.jose.jwk.JsonWebKey;
 import org.apache.cxf.rs.security.jose.jwk.JsonWebKeys;
 import org.apache.cxf.rs.security.jose.jwk.JwkUtils;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 
 @Slf4j
@@ -44,9 +55,14 @@ public class JoseCryptoServiceConfiguration {
     private ContentAlgorithm contentAlgorithm;
     private KeyAlgorithm keyAlgorithm;
     private SignatureAlgorithm signatureAlgorithm;
+    private String zipAlgorithm;
+    private String metadataTemplate;
     private Boolean strictVerification;
-    private Boolean preserveMetadata;
     private SimpleDateFormat dateFormat;
+    @Value("${ix.home}")
+    private String ixHome;
+    @Value("${application.host}")
+    private String applicationHost;
 
     @PostConstruct
     public void init() {
@@ -73,11 +89,14 @@ public class JoseCryptoServiceConfiguration {
         if (signatureAlgorithm == null) {
             signatureAlgorithm = SignatureAlgorithm.RS256;
         }
+        if (zipAlgorithm == null) {
+            zipAlgorithm = JoseConstants.JWE_DEFLATE_ZIP_ALGORITHM;
+        }
+        if (metadataTemplate == null) {
+            metadataTemplate = "Exported on ${date} by ${user} from ${verified} source ${source} (SRS schema version:${version})";
+        }
         if (strictVerification == null) {
             strictVerification = false;
-        }
-        if (preserveMetadata == null) {
-            preserveMetadata = true;
         }
         if (dateFormat == null) {
             dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -94,6 +113,8 @@ public class JoseCryptoServiceConfiguration {
             }
             try (InputStream is = new UrlResource(filename).getInputStream();) {
                 jwksobj = JwkUtils.readJwkSet(is);
+            } catch (FileNotFoundException e) {
+                jwksobj = generateKeyStore(ixHome + "/keystore.jwks", applicationHost);
             } catch (Exception e) {
                 log.error(e.toString());
             }
@@ -124,5 +145,29 @@ public class JoseCryptoServiceConfiguration {
 
     public static JoseCryptoServiceConfiguration INSTANCE() {
         return _instanceSupplier.get();
+    }
+
+    private static JsonWebKeys generateKeyStore(String filename, String applicationHost) {
+        JsonWebKeys jwksobj = new JsonWebKeys();
+        try (InputStream is = new UrlResource(filename).getInputStream();) {
+            return JwkUtils.readJwkSet(is);
+        } catch (Exception e) {
+        }
+        try {
+            String kid = new URL(applicationHost).getHost();
+            KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+            generator.initialize(2048);
+            KeyPair pair = generator.generateKeyPair();
+            JsonWebKey jwk = JwkUtils.fromRSAPrivateKey((RSAPrivateKey) pair.getPrivate(), "RSA-OAEP", kid);
+            jwksobj.setKey(jwk);
+            String out = JwkUtils.jwkSetToJson(jwksobj);
+            try (FileWriter fileWriter = new FileWriter(filename)) {
+                fileWriter.write(out);
+                return jwksobj;
+            }
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
+        return jwksobj;
     }
 }

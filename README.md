@@ -34,6 +34,7 @@ ix.ginas.export.exporterfactories.substances += {
             #"AUTHENTICATION_HEADER_NAME_EMAIL": "{{user.email}}",
             "auth-username": "{{user.name}}",
             "auth-key": "{{user.apikey}}"
+
         },
         "baseUrl": "https://public.gsrs.test/api/v1/substances",
         "timeout": 120000,
@@ -104,9 +105,10 @@ gsrs.crypto = {
     "privateKeyId": "NCATS",
     "contentAlgorithm": "A256GCM",
     "keyAlgorithm": "RSA_OAEP",
+    "zipAlgorithm": "DEF",
     "signatureAlgorithm": "RS256",
     "strictVerification": false,
-    "preserveMetadata": true,
+    "metadataTemplate": "Exported on ${date} by ${user} from ${verified} source ${source} (SRS schema version:${version})",
     "dateFormat": "yyyy-MM-dd HH:mm:ss"
 }
 

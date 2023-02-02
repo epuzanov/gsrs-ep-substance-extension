@@ -9,20 +9,26 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import gov.nih.ncats.common.util.CachedSupplier;
 import gsrs.springUtils.StaticContextAccessor;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import lombok.extern.slf4j.Slf4j;
 
-import org.apache.cxf.common.util.StringUtils;
+import org.apache.cxf.common.util.CompressionUtils;
+import org.apache.cxf.rs.security.jose.common.JoseConstants;
 import org.apache.cxf.rs.security.jose.common.JoseType;
 import org.apache.cxf.rs.security.jose.jwa.ContentAlgorithm;
 import org.apache.cxf.rs.security.jose.jwa.KeyAlgorithm;
 import org.apache.cxf.rs.security.jose.jwa.SignatureAlgorithm;
 import org.apache.cxf.rs.security.jose.jwe.ContentEncryptionProvider;
+import org.apache.cxf.rs.security.jose.jwe.JweDecryptionOutput;
 import org.apache.cxf.rs.security.jose.jwe.JweDecryptionProvider;
 import org.apache.cxf.rs.security.jose.jwe.JweEncryption;
 import org.apache.cxf.rs.security.jose.jwe.JweEncryptionProvider;
@@ -48,7 +54,7 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-public class JoseCryptoService {
+public class JoseCryptoService implements CryptoService {
 
     private static final JoseCryptoServiceConfiguration config = JoseCryptoServiceConfiguration.INSTANCE();
     private static CachedSupplier<JoseCryptoService> _instanceSupplier = CachedSupplier.of(()->{
@@ -61,34 +67,58 @@ public class JoseCryptoService {
         return instance;
     });
 
-    public static JoseCryptoService INSTANCE() {
-        return _instanceSupplier.get();
+    public static CryptoService INSTANCE() {
+        return (CryptoService) _instanceSupplier.get();
     }
 
-    public static String sign(String str, Map<String, Object> metadata) {
+    private static String format(String template, Map<String, String> parameters) {
+        StringBuilder newTemplate = new StringBuilder(template);
+        List<String> valueList = new ArrayList<String>();
+        Matcher matcher = Pattern.compile("[$][{](\\w+)}").matcher(template);
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            String paramName = "${" + key + "}";
+            int index = newTemplate.indexOf(paramName);
+            if (index != -1) {
+                newTemplate.replace(index, index + paramName.length(), "%s");
+                valueList.add(parameters.get(key));
+            }
+        }
+        return String.format(newTemplate.toString(), valueList.toArray());
+    }
+
+    @Override
+    public boolean isReady() {
+        return config == null ? false : true;
+    }
+
+    @Override
+    public String sign(String str, Map<String, Object> metadata) {
         if (config.getPrivateKeyId() == null) {
             return "";
         }
         JwsHeaders protectedHeaders = new JwsHeaders(metadata);
         try {
             protectedHeaders.setKeyId(config.getPrivateKeyId());
-            protectedHeaders.setContentType("application/json");
+            protectedHeaders.setContentType(JoseConstants.MEDIA_TYPE_JOSE_JSON);
             JwsCompactProducer jwsProducer = new JwsCompactProducer(protectedHeaders, str);
             JwsSignatureProvider jwsp = JwsUtils.getSignatureProvider(config.getPrivateKey(), config.getSignatureAlgorithm());
             str = jwsProducer.signWith(jwsp);
         } catch (Exception e) {
+            log.error(e.toString());
         }
         return str;
     }
 
-    public static JsonNode verify(String jwsCompactStr) {
+    @Override
+    public JsonNode verify(String jwsCompactStr) {
         boolean verified = true;
         ObjectMapper mapper = new ObjectMapper();
         JsonNode result = null;
         JwsCompactConsumer jwsConsumer = new JwsCompactConsumer(jwsCompactStr);
         try {
             JwsHeaders headers = jwsConsumer.getJwsHeaders();
-            if (config.getStrictVerification() || config.getPreserveMetadata()) {
+            if (config.getStrictVerification() || !config.getMetadataTemplate().isEmpty()) {
                 JsonWebKey key = config.getKey(headers.getKeyId());
                 if (key != null) {
                     verified = jwsConsumer.verifySignatureWith(key, headers.getSignatureAlgorithm());
@@ -100,70 +130,78 @@ public class JoseCryptoService {
                 return null;
             }
             result = mapper.readTree(jwsConsumer.getDecodedJwsPayloadBytes());
-            if (config.getPreserveMetadata()) {
-                Map<String, Object> hm = headers.asMap();
-                StringBuilder citation = new StringBuilder("Exported on ")
-                    .append(config.getDateFormat().format(new Date(Long.valueOf(hm.getOrDefault("dat", new Date().getTime()).toString()))))
-                    .append(" by ")
-                    .append(hm.getOrDefault("usr", "unknown"))
-                    .append(" from ")
-                    .append(verified ? "trusted" : "untrusted")
-                    .append(" source ")
-                    .append(headers.getKeyId())
-                    .append(" (SRS schema version:")
-                    .append(hm.getOrDefault("ver", "unknown"))
-                    .append(")");
-                ObjectNode ref = JsonNodeFactory.instance.objectNode();
-                ref.set("docType", JsonNodeFactory.instance.textNode("SYSTEM"));
-                ref.set("citation", JsonNodeFactory.instance.textNode(citation.toString()));
-                if (hm.containsKey("ori")) {
-                    ref.set("url", JsonNodeFactory.instance.textNode(headers.getHeader("ori").toString()));
+            if (!config.getMetadataTemplate().isEmpty()) {
+                ObjectNode metadata = JsonNodeFactory.instance.objectNode();
+                Map<String, String> parameterMap = new HashMap<String, String>();
+                if (headers.containsProperty("ori")) {
+                    metadata.set("url", JsonNodeFactory.instance.textNode(headers.getHeader("ori").toString()));
                 }
-                if (hm.containsKey("dat")) {
-                    ref.set("documentDate", JsonNodeFactory.instance.numberNode(Long.valueOf(headers.getHeader("dat").toString())));
+                if (headers.containsProperty("dat")) {
+                    metadata.set("documentDate", JsonNodeFactory.instance.numberNode(Long.valueOf(headers.getHeader("dat").toString())));
+                    parameterMap.put("date", config.getDateFormat().format(new Date(Long.valueOf(headers.getHeader("dat").toString()))));
+                } else {
+                    parameterMap.put("date", "unknown date");
                 }
-                ((ObjectNode) result).put("_metadata", ref);
+                parameterMap.put("user", headers.containsProperty("usr") ? headers.getHeader("usr").toString() : "unknown");
+                parameterMap.put("version", headers.containsProperty("ver") ? headers.getHeader("ver").toString() : "unknown");
+                parameterMap.put("source", headers.getKeyId());
+                parameterMap.put("verified", verified ? "trusted" : "untrusted");
+                metadata.set("txt", JsonNodeFactory.instance.textNode(format(config.getMetadataTemplate(), parameterMap)));
+                ((ObjectNode) result).put("_metadata", metadata);
             }
         } catch (Exception e) {
+            log.error(e.toString());
         }
         return result;
     }
 
-    public static void encrypt(ObjectNode node) {
+    @Override
+    public void encrypt(ObjectNode node, List<String> recipients) {
         JsonWebKey key;
         KeyEncryptionProvider keyEncryption;
         ObjectMapper mapper = new ObjectMapper();
         JsonNode result = JsonNodeFactory.instance.objectNode();
         JweHeaders protectedHeaders = new JweHeaders(config.getContentAlgorithm());
         protectedHeaders.setType(JoseType.JOSE_JSON);
-        //protectedHeaders.setZipAlgorithm("DEF");
         JweHeaders sharedUnprotectedHeaders = new JweHeaders();
+        if (JoseConstants.JWE_DEFLATE_ZIP_ALGORITHM.equals(config.getZipAlgorithm())) {
+            protectedHeaders.setZipAlgorithm(config.getZipAlgorithm());
+        }
         sharedUnprotectedHeaders.setKeyEncryptionAlgorithm(config.getKeyAlgorithm());
         ContentEncryptionProvider contentEncryption = JweUtils.getContentEncryptionProvider(config.getContentAlgorithm(), true);
         List<JweEncryptionProvider> jweProviders = new LinkedList<JweEncryptionProvider>();
-        List<JweHeaders> perRecipientHeades = new LinkedList<JweHeaders>();
-        JsonWebKey privateKey = config.getPrivateKey();
-        if (config.getPrivateKeyId() != null && node.get("access").findValue(config.getPrivateKeyId()) == null) {
-            keyEncryption = JweUtils.getKeyEncryptionProvider(privateKey, config.getKeyAlgorithm());
-            jweProviders.add(new JweEncryption(keyEncryption, contentEncryption));
-            perRecipientHeades.add(new JweHeaders(config.getPrivateKeyId()));
+        List<JweHeaders> perRecipientHeaders = new LinkedList<JweHeaders>();
+        if (config.getPrivateKeyId() != null && !recipients.contains(config.getPrivateKeyId())) {
+            recipients.add(config.getPrivateKeyId());
         }
-        Iterator<JsonNode> it = node.get("access").elements();
-        while (it.hasNext()) {
-            key = config.getKey(it.next().asText());
+        for (String keyId : recipients) {
+            key = config.getKey(keyId);
             if (key != null) {
                 keyEncryption = JweUtils.getKeyEncryptionProvider(key, config.getKeyAlgorithm());
                 jweProviders.add(new JweEncryption(keyEncryption, contentEncryption));
-                perRecipientHeades.add(new JweHeaders(key.getKeyId()));
+                perRecipientHeaders.add(new JweHeaders(key.getKeyId()));
             }
         }
         if (!jweProviders.isEmpty()) {
-            JweJsonProducer p = new JweJsonProducer(protectedHeaders,
-                                        sharedUnprotectedHeaders,
-                                        StringUtils.toBytesUTF8(node.toString()));
             try {
-                result = mapper.readTree(p.encryptWith(jweProviders, perRecipientHeades));
+                byte[] bytes = node.toString().getBytes("UTF-8");
+                // Jwe Compression Issue Workaround start
+                if (JoseConstants.JWE_DEFLATE_ZIP_ALGORITHM.equals(config.getZipAlgorithm())) {
+                    protectedHeaders.removeProperty("zip");
+                    bytes = CompressionUtils.deflate(bytes, true);
+                }
+                // Jwe Compression Issue Workaround end
+                JweJsonProducer p = new JweJsonProducer(protectedHeaders,
+                                                        sharedUnprotectedHeaders,
+                                                        bytes);
+                result = mapper.readTree(p.encryptWith(jweProviders, perRecipientHeaders));
+                // Jwe Compression Issue Workaround start
+                if (JoseConstants.JWE_DEFLATE_ZIP_ALGORITHM.equals(config.getZipAlgorithm())) {
+                    ((ObjectNode) result.get("unprotected")).put("zip", "DEF");
+                }
+                // Jwe Compression Issue Workaround end
             } catch (Exception e) {
+                log.error(e.toString());
             }
         }
         node.removeAll();
@@ -174,7 +212,8 @@ public class JoseCryptoService {
         }
     }
 
-    public static void decrypt(ObjectNode node) {
+    @Override
+    public void decrypt(ObjectNode node) {
         JweJsonConsumer consumer = new JweJsonConsumer(node.toString());
         node.removeAll();
         if (config.getPrivateKeyId() == null) {
@@ -193,47 +232,12 @@ public class JoseCryptoService {
                 }
             }
         } catch (Exception e) {
+            log.error(e.toString());
         }
         Iterator<Map.Entry<String, JsonNode>> fields = result.fields();
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> field = fields.next();
             node.set(field.getKey(), field.getValue());
-        }
-    }
-
-    public static void protect(JsonNode node) {
-        if (node.isObject()) {
-            Iterator<String> it = node.fieldNames();
-            while (it.hasNext()) {
-                String key = it.next();
-                protect(node.get(key));
-            }
-            if (node.has("access") && node.get("access").has(0)) {
-                encrypt((ObjectNode)node);
-            }
-        } else if (node.isArray()) {
-            Iterator<JsonNode> it = node.elements();
-            while (it.hasNext()) {
-                protect(it.next());
-            }
-        }
-    }
-
-    public static void unprotect(JsonNode node) {
-        if (node.isObject()) {
-            if (node.has("ciphertext")) {
-                decrypt((ObjectNode)node);
-            }
-            Iterator<String> it = node.fieldNames();
-            while (it.hasNext()) {
-                String key = it.next();
-                unprotect(node.get(key));
-            }
-        } else if (node.isArray()) {
-            Iterator<JsonNode> it = node.elements();
-            while (it.hasNext()) {
-                unprotect(it.next());
-            }
         }
     }
 }
