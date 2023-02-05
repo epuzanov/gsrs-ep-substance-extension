@@ -101,10 +101,10 @@ The JsonPortableExporter can be used for exporting substances in the GSRS portab
 ```
 gsrs.crypto = {
     #"jsonWebKeys": { include "file:///etc/gsrs/conf/keystore.jwks.json" },
-    "jsonWebKeys": { "filename": "keystore.jwks" },
-    "privateKeyId": "NCATS",
+    "jsonWebKeys": { "filename": "conf/keystore.jwks", "password": "VerySecurePasswordLongerWhen9Characters" },
+    "privateKeyId": "gsrs.ncats.nih.gov",
     "contentAlgorithm": "A256GCM",
-    "keyAlgorithm": "RSA_OAEP",
+    "keyAlgorithm": "RSA-OAEP-256",
     "zipAlgorithm": "DEF",
     "signatureAlgorithm": "RS256",
     "strictVerification": false,
