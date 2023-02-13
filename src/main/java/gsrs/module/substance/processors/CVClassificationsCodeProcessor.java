@@ -84,7 +84,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
         }
 
         public boolean isOutdated() {
-            return Duration.between(lastUpdated, Instant.now()).toSeconds() > timeout;
+            return Duration.between(lastUpdated, Instant.now()).getSeconds() > timeout;
         }
     }
 
