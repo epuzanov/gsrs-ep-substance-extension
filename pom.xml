@@ -17,7 +17,7 @@
         <log4j2.version>2.17.2</log4j2.version>
         <jmespath.version>0.5.1</jmespath.version>
         <httpclient.version>4.5.13</httpclient.version>
-        <jose.version>4.0.0</jose.version>
+        <nimbusds.version>9.22</nimbusds.version>
         <lombok.version>1.18.22</lombok.version>
     </properties>
 
@@ -55,9 +55,9 @@
             <version>${httpclient.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-rs-security-jose</artifactId>
-            <version>${jose.version}</version>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+            <version>${nimbusds.version}</version>
         </dependency>
     </dependencies>
 
