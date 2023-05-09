@@ -30,10 +30,11 @@ public class GsrsApiExporter implements Exporter<Substance> {
     private final HttpHeaders headers;
     private final BufferedWriter out;
     private final RestTemplate restTemplate;
+    private final boolean allowedExport;
     private final boolean validate;
     private final ObjectWriter writer = EntityFactory.EntityMapper.FULL_ENTITY_MAPPER().writer();
 
-    public GsrsApiExporter(OutputStream out, RestTemplate restTemplate, Map<String, String> headers, boolean validate) throws IOException {
+    public GsrsApiExporter(OutputStream out, RestTemplate restTemplate, Map<String, String> headers, boolean allowedExport,  boolean validate) throws IOException {
         Objects.requireNonNull(out);
         this.out = new BufferedWriter(new OutputStreamWriter(out));
         Objects.requireNonNull(restTemplate);
@@ -44,12 +45,14 @@ public class GsrsApiExporter implements Exporter<Substance> {
             h.set(entry.getKey(), entry.getValue());
         }
         this.headers = h;
+        this.allowedExport = allowedExport;
         this.validate = validate;
         log.debug("BaseUrl: " + restTemplate.getUriTemplateHandler().expand("/") + " Headers: " + h.toString());
     }
 
     private HttpEntity<String> makeRequest(Substance obj) throws Exception {
-        HttpEntity<String> request = new HttpEntity<String>(writer.writeValueAsString(obj), headers);
+        String jsonStr = writer.writeValueAsString(obj);
+        HttpEntity<String> request = new HttpEntity<String>(jsonStr, headers);
         if (validate) {
             ValidationResponse vr = restTemplate.postForObject("/@validate", request, ValidationResponse.class);
             if (vr.getValidationMessages().isEmpty()) throw new Exception("GSRS API not found");
@@ -63,15 +66,30 @@ public class GsrsApiExporter implements Exporter<Substance> {
         HttpEntity<String> request;
         Date date = new Date();
         try {
+            if (!allowedExport) {
+                throw new Exception("Export denied");
+            }
             try {
                 obj.version = restTemplate.getForObject("/{uuid}/version", String.class, obj.getUuid().toString()).replace("\"", "");
                 request = makeRequest(obj);
                 restTemplate.put("/", request);
             } catch (HttpClientErrorException.NotFound ex) {
+                if (!"404 : [{\"message\":\"not found\",\"status\":404}]".equals(ex.getMessage())) {
+                    throw new Exception(ex.getMessage());
+                }
                 obj.version = "1";
+                String approvalID = obj.getApprovalID();
+                if (approvalID != null) {
+                    obj.approvalID = null;
+                }
                 request = makeRequest(obj);
                 Substance newObj = restTemplate.postForObject("/", request, Substance.class);
                 if (newObj.getUuid() == null) throw new Exception("GSRS API not found");
+                if (approvalID != null) {
+                    obj.approvalID = approvalID;
+                    request = makeRequest(obj);
+                    restTemplate.put("/", request);
+                }
             }
             out.write(String.format("%tF %tT Substance: %s %s - SUCCESS", date, date, obj.getUuid().toString(), obj.getName()));
         } catch (Exception ex) {

@@ -39,6 +39,7 @@ ix.ginas.export.exporterfactories.substances += {
         "baseUrl": "https://public.gsrs.test/api/v1/substances",
         "timeout": 120000,
         "trustAllCerts": false,
+        "allowedRole": "Approver",
         "validate": true
     }
 }

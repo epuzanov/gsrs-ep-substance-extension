@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import gsrs.repository.UserProfileRepository;
+import ix.core.models.Role;
 import ix.core.models.UserProfile;
 import ix.ginas.exporters.Exporter;
 import ix.ginas.exporters.ExporterFactory;
@@ -52,6 +53,7 @@ public class GsrsApiExporterFactory implements ExporterFactory {
     private int timeout = 120000;
     private boolean trustAllCerts = false;
     private boolean validate = true;
+    private Role allowedRole = null;
     private String baseUrl = "http://localhost:8080/api/v1/substances";
     private Map<String, String> headers = new HashMap<String, String>();
     private final TrustManager[] trustAllCertificates = new TrustManager[]{
@@ -114,6 +116,10 @@ public class GsrsApiExporterFactory implements ExporterFactory {
         this.headers = headers;
     }
 
+    public void setAllowedRole(String allowedRole) {
+        this.allowedRole = Role.valueOf(allowedRole);
+    }
+
     @Override
     public boolean supports(Parameters params) {
         return params.getFormat().equals(format);
@@ -145,7 +151,8 @@ public class GsrsApiExporterFactory implements ExporterFactory {
         RestTemplate restTemplate = new RestTemplate(clientFactory);
         restTemplate.setUriTemplateHandler(new DefaultUriBuilderFactory(baseUrl));
         UserProfile profile = userProfileRepository.findByUser_UsernameIgnoreCase(params.getUsername());
-        return new GsrsApiExporter(out, restTemplate, getHeaders(profile), validate);
+        boolean allowedExport = (allowedRole == null || profile.hasRole(allowedRole)) ? true : false;
+        return new GsrsApiExporter(out, restTemplate, getHeaders(profile), allowedExport, validate);
     }
 
     @Override
