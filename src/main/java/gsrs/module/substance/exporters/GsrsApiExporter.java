@@ -74,7 +74,7 @@ public class GsrsApiExporter implements Exporter<Substance> {
                 request = makeRequest(obj);
                 restTemplate.put("/", request);
             } catch (HttpClientErrorException.NotFound ex) {
-                if (!"404 : [{\"message\":\"not found\",\"status\":404}]".equals(ex.getMessage())) {
+                if (!ex.getMessage().endsWith("[{\"message\":\"not found\",\"status\":404}]")) {
                     throw new Exception(ex.getMessage());
                 }
                 obj.version = "1";
