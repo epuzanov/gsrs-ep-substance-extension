@@ -14,6 +14,8 @@ import java.io.OutputStreamWriter;
 import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -32,9 +34,11 @@ public class GsrsApiExporter implements Exporter<Substance> {
     private final RestTemplate restTemplate;
     private final boolean allowedExport;
     private final boolean validate;
+    private final String newAuditor;
     private final ObjectWriter writer = EntityFactory.EntityMapper.FULL_ENTITY_MAPPER().writer();
+    private final Pattern AUDIT_PAT = Pattern.compile("edBy\":\"[^\"]*\"");
 
-    public GsrsApiExporter(OutputStream out, RestTemplate restTemplate, Map<String, String> headers, boolean allowedExport,  boolean validate) throws IOException {
+    public GsrsApiExporter(OutputStream out, RestTemplate restTemplate, Map<String, String> headers, boolean allowedExport,  boolean validate, String newAuditor) throws IOException {
         Objects.requireNonNull(out);
         this.out = new BufferedWriter(new OutputStreamWriter(out));
         Objects.requireNonNull(restTemplate);
@@ -47,11 +51,15 @@ public class GsrsApiExporter implements Exporter<Substance> {
         this.headers = h;
         this.allowedExport = allowedExport;
         this.validate = validate;
+        this.newAuditor = newAuditor != null ? "edBy\":\"" + newAuditor + "\"" : null;
         log.debug("BaseUrl: " + restTemplate.getUriTemplateHandler().expand("/") + " Headers: " + h.toString());
     }
 
     private HttpEntity<String> makeRequest(Substance obj) throws Exception {
         String jsonStr = writer.writeValueAsString(obj);
+        if (newAuditor != null) {
+            jsonStr = AUDIT_PAT.matcher(jsonStr).replaceAll(newAuditor);
+        }
         HttpEntity<String> request = new HttpEntity<String>(jsonStr, headers);
         if (validate) {
             ValidationResponse vr = restTemplate.postForObject("/@validate", request, ValidationResponse.class);

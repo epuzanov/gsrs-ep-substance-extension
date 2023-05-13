@@ -54,6 +54,7 @@ public class GsrsApiExporterFactory implements ExporterFactory {
     private boolean trustAllCerts = false;
     private boolean validate = true;
     private Role allowedRole = null;
+    private String newAuditor = null;
     private String baseUrl = "http://localhost:8080/api/v1/substances";
     private Map<String, String> headers = new HashMap<String, String>();
     private final TrustManager[] trustAllCertificates = new TrustManager[]{
@@ -120,6 +121,10 @@ public class GsrsApiExporterFactory implements ExporterFactory {
         this.allowedRole = Role.valueOf(allowedRole);
     }
 
+    public void setNewAuditor(String newAuditor) {
+        this.newAuditor = newAuditor;
+    }
+
     @Override
     public boolean supports(Parameters params) {
         return params.getFormat().equals(format);
@@ -152,7 +157,7 @@ public class GsrsApiExporterFactory implements ExporterFactory {
         restTemplate.setUriTemplateHandler(new DefaultUriBuilderFactory(baseUrl));
         UserProfile profile = userProfileRepository.findByUser_UsernameIgnoreCase(params.getUsername());
         boolean allowedExport = (allowedRole == null || profile.hasRole(allowedRole)) ? true : false;
-        return new GsrsApiExporter(out, restTemplate, getHeaders(profile), allowedExport, validate);
+        return new GsrsApiExporter(out, restTemplate, getHeaders(profile), allowedExport, validate, newAuditor);
     }
 
     @Override

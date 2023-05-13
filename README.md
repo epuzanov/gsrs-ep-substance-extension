@@ -40,6 +40,7 @@ ix.ginas.export.exporterfactories.substances += {
         "timeout": 120000,
         "trustAllCerts": false,
         "allowedRole": "Approver",
+        "newAuditor": "admin",
         "validate": true
     }
 }
