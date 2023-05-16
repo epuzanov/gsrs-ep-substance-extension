@@ -41,6 +41,7 @@ ix.ginas.export.exporterfactories.substances += {
         "trustAllCerts": false,
         "allowedRole": "Approver",
         "newAuditor": "admin",
+        "changeReason": "{{changeReason}} (Version {{version}})",
         "validate": true
     }
 }

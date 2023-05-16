@@ -35,10 +35,11 @@ public class GsrsApiExporter implements Exporter<Substance> {
     private final boolean allowedExport;
     private final boolean validate;
     private final String newAuditor;
+    private final String changeReason;
     private final ObjectWriter writer = EntityFactory.EntityMapper.FULL_ENTITY_MAPPER().writer();
     private final Pattern AUDIT_PAT = Pattern.compile("edBy\":\"[^\"]*\"");
 
-    public GsrsApiExporter(OutputStream out, RestTemplate restTemplate, Map<String, String> headers, boolean allowedExport,  boolean validate, String newAuditor) throws IOException {
+    public GsrsApiExporter(OutputStream out, RestTemplate restTemplate, Map<String, String> headers, boolean allowedExport,  boolean validate, String newAuditor, String changeReason) throws IOException {
         Objects.requireNonNull(out);
         this.out = new BufferedWriter(new OutputStreamWriter(out));
         Objects.requireNonNull(restTemplate);
@@ -52,6 +53,7 @@ public class GsrsApiExporter implements Exporter<Substance> {
         this.allowedExport = allowedExport;
         this.validate = validate;
         this.newAuditor = newAuditor != null ? "edBy\":\"" + newAuditor + "\"" : null;
+        this.changeReason = changeReason;
         log.debug("BaseUrl: " + restTemplate.getUriTemplateHandler().expand("/") + " Headers: " + h.toString());
     }
 
@@ -76,6 +78,9 @@ public class GsrsApiExporter implements Exporter<Substance> {
         try {
             if (!allowedExport) {
                 throw new Exception("Export denied");
+            }
+            if (changeReason != null) {
+                obj.changeReason = changeReason.replaceAll("{{version}}", obj.version).replaceAll("{{changeReason}}", obj.changeReason);
             }
             try {
                 obj.version = restTemplate.getForObject("/{uuid}/version", String.class, obj.getUuid().toString()).replace("\"", "");
