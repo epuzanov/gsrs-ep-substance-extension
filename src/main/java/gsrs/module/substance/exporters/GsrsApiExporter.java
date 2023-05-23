@@ -80,7 +80,11 @@ public class GsrsApiExporter implements Exporter<Substance> {
                 throw new Exception("Export denied");
             }
             if (changeReason != null) {
-                obj.changeReason = changeReason.replace("{{version}}", obj.version).replace("{{changeReason}}", obj.changeReason);
+                if (obj.changeReason != null) {
+                    obj.changeReason = changeReason.replace("{{version}}", obj.version).replace("{{changeReason}}", obj.changeReason).trim();
+                } else {
+                    obj.changeReason = changeReason.replace("{{version}}", obj.version).trim();
+                }
             }
             try {
                 obj.version = restTemplate.getForObject("/{uuid}/version", String.class, obj.getUuid().toString()).replace("\"", "");
