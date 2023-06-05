@@ -61,6 +61,7 @@ import org.apache.commons.vfs2.provider.sftp.SftpFileSystemConfigBuilder;
 public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
 
     private String name = "substances";
+    private FieldConverter fieldConverter = new DefaultFieldConverter();
     private String csvDelimiter = ";";
     private String csvQuoteChar = "\"";
     private String csvEscapeChar = "";
@@ -70,6 +71,16 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
     private List<DestinationConfig> destinations = new ArrayList<DestinationConfig>();
     @JsonIgnore
     private Lock lock = new ReentrantLock();
+
+    public interface FieldConverter {
+        String toFormat(String fmt, String value) throws Exception;
+    }
+
+    private class DefaultFieldConverter implements FieldConverter {
+        public String toFormat(String fmt, String value) throws Exception {
+            return value;
+        }
+    }
 
     @Data
     private class ZipEntryConfig {
@@ -105,6 +116,10 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
             }
             return "exports/substances.zip";
         }
+    }
+
+    public void setFieldConverter(String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+        this.fieldConverter = (FieldConverter) Class.forName(className).newInstance();
     }
 
     private Connection getConnection() throws SQLException {
@@ -168,9 +183,9 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
             while (rs.next()) {
                 part_value = "";
                 // log.debug("Processing row: " + rs.getString(1));
-                for (int i = 1; i <= ccount; i++) {
-                    value = rs.getString(i);
-                    if (cast_fields.get(i - 1) == "PART") {
+                for (int i = 0; i < ccount; i++) {
+                    value = rs.getString(i + 1);
+                    if (cast_fields.get(i) == "PART") {
                         if (value == null) {
                             part_value = "";
                         } else {
@@ -185,10 +200,11 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                         value = value + part_value;
                         part_value = "";
                     }
-                    if (i != 1) {
+                    if (i != 0) {
                         out.print(csvDelimiter);
                     }
                     if (value != null && !"".equals(value)) {
+                        value = fieldConverter.toFormat(cast_fields.get(i), value);
                         if (value != null && !"".equals(value)) {
                             if (!"".equals(csvQuoteChar) && value.contains(csvQuoteChar)) {
                                 if ("".equals(csvEscapeChar)) {

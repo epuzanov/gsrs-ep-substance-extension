@@ -19,6 +19,7 @@
         <httpclient.version>4.5.13</httpclient.version>
         <nimbusds.version>9.22</nimbusds.version>
         <lombok.version>1.18.22</lombok.version>
+        <vfs.version>2.9.0</vfs.version>
     </properties>
 
     <dependencies>
@@ -48,6 +49,11 @@
             <groupId>io.burt</groupId>
             <artifactId>jmespath-jackson</artifactId>
             <version>${jmespath.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-vfs2</artifactId>
+            <version>${vfs.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
