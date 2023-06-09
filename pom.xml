@@ -15,11 +15,6 @@
         <spring-boot.version>2.4.5</spring-boot.version>
         <gsrs.substances.version>3.0.3-SNAPSHOT</gsrs.substances.version>
         <log4j2.version>2.17.2</log4j2.version>
-        <jmespath.version>0.5.1</jmespath.version>
-        <httpclient.version>4.5.13</httpclient.version>
-        <nimbusds.version>9.22</nimbusds.version>
-        <lombok.version>1.18.22</lombok.version>
-        <vfs.version>2.9.0</vfs.version>
     </properties>
 
     <dependencies>
@@ -37,33 +32,48 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
+            <version>1.18.22</version>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.burt</groupId>
             <artifactId>jmespath-core</artifactId>
-            <version>${jmespath.version}</version>
+            <version>0.5.1</version>
         </dependency>
         <dependency>
             <groupId>io.burt</groupId>
             <artifactId>jmespath-jackson</artifactId>
-            <version>${jmespath.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-vfs2</artifactId>
-            <version>${vfs.version}</version>
+            <version>0.5.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>${httpclient.version}</version>
+            <version>4.5.13</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-vfs2</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.23.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.55</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.9.0</version>
         </dependency>
         <dependency>
             <groupId>com.nimbusds</groupId>
             <artifactId>nimbus-jose-jwt</artifactId>
-            <version>${nimbusds.version}</version>
+            <version>9.22</version>
         </dependency>
     </dependencies>
 
