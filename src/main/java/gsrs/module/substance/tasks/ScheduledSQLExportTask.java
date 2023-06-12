@@ -3,11 +3,14 @@ package gsrs.module.substance.tasks;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import gsrs.scheduledTasks.ScheduledTaskInitializer;
 import gsrs.scheduledTasks.SchedulerPlugin;
 import gsrs.scheduledTasks.SchedulerPlugin.TaskListener;
 import gsrs.springUtils.StaticContextAccessor;
+import gsrs.module.substance.converters.DefaultStringConverter;
+import gsrs.module.substance.converters.StringConverter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -68,56 +71,51 @@ import org.apache.commons.vfs2.util.DelegatingFileSystemOptionsBuilder;
 public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
 
     private String name = "substances";
-    private FieldConverter fieldConverter = new DefaultFieldConverter();
-    private String csvDelimiter = ";";
-    private String csvQuoteChar = "\"";
-    private String csvEscapeChar = "";
-    @JsonProperty(value="files")
+    private StringConverter stringConverter = new DefaultStringConverter();
     private List<EntryConfig> files = new ArrayList<EntryConfig>();
-    @JsonProperty(value="destinations")
     private List<DestinationConfig> destinations = new ArrayList<DestinationConfig>();
     @JsonIgnore
     private Lock lock = new ReentrantLock();
 
-    public interface FieldConverter {
-        String toFormat(String fmt, String value) throws Exception;
-    }
+    @Data
+    private class EntryConfig {
+        private final String name;
+        private final String msg;
+        private final String sql;
+        private final String encoding;
+        private final String delimiter;
+        private final String quoteChar;
+        private final String escapeChar;
+        private final boolean header;
 
-    private class DefaultFieldConverter implements FieldConverter {
-        public String toFormat(String fmt, String value) throws Exception {
-            return value;
+        public EntryConfig (Map<String, Object> m) {
+            this.name = (String) m.get("name");
+            this.msg = (String) m.get("msg");
+            this.sql = (String) m.get("sql");
+            this.encoding = m.getOrDefault("encoding", "ISO-8859-1").toString();
+            this.header = m.containsKey("header") ? ((Boolean) m.get("header")).booleanValue() : true;
+            this.delimiter = m.getOrDefault("delimiter", ";").toString();
+            this.quoteChar = m.getOrDefault("quoteChar", "\"").toString();
+            this.escapeChar = m.getOrDefault("escapeChar", "").toString();
         }
+
+        public boolean getHeader() {
+            return header;
+        }
+
     }
 
     @Data
-    private class EntryConfig {
-        @JsonProperty(value="name")
-        private final String name;
-        @JsonProperty(value="msg")
-        private final String msg;
-        @JsonProperty(value="sql")
-        private final String sql;
-        @JsonProperty(value="encoding")
-        private String encoding = "ISO-8859-1";
-        @JsonProperty(value="addHeader")
-        private Boolean addHeader;
-
-        public boolean getAddHeader() {
-            return addHeader != null ? addHeader.booleanValue() : true;
-        }
-    }
-
     private class DestinationConfig {
         private final URI uri;
         private final FileSystemOptions options;
 
-        @JsonCreator
         public DestinationConfig(Map<String, String> dst) throws FileSystemException, URISyntaxException {
             FileSystemOptions opts = new FileSystemOptions();
             this.uri = new URI(dst.remove("uri"));
             String scheme = this.uri.getScheme().toLowerCase();
             String domain =  dst.remove("domain");
-            String user =  dst.remove("name");
+            String user =  dst.remove("user");
             String password = dst.remove("password");
             if (user != null && user.length() > 0 && password != null && password.length() > 0) {
                 UserAuthenticator auth = new StaticUserAuthenticator(domain, user, password);
@@ -132,15 +130,8 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                 }
                 manager.close();
             }
+            log.debug(opts.toString());
             this.options = opts;
-        }
-
-        public URI getUri() {
-            return uri;
-        }
-
-        public FileSystemOptions getOptions() {
-            return options;
         }
 
         public FileObject getFileObject(FileSystemManager manager) throws FileSystemException {
@@ -148,8 +139,23 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         }
     }
 
-    public void setFieldConverter(String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
-        this.fieldConverter = (FieldConverter) Class.forName(className).getDeclaredConstructor().newInstance();
+    @JsonProperty(value="files")
+    public void setFiles(Map m) {
+        for (Object value : m.values()) {
+            files.add(new EntryConfig((Map<String, Object>) value));
+        }
+    }
+
+    @JsonProperty(value="destinations")
+    public void setDestinations(Map m) throws FileSystemException, URISyntaxException {
+        for (Object value : m.values()) {
+            destinations.add(new DestinationConfig((Map<String, String>) value));
+        }
+    }
+
+    @JsonProperty(value="stringConverter")
+    public void setStringConverter(String className) throws ClassNotFoundException, IllegalAccessException, InstantiationException, InvocationTargetException, NoSuchMethodException {
+        this.stringConverter = (StringConverter) Class.forName(className).getDeclaredConstructor().newInstance();
     }
 
     private Connection getConnection() throws SQLException {
@@ -190,13 +196,13 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                 } else {
                     cast_fields.add("NONE");
                 }
-                if (!entry.getAddHeader()) continue;
+                if (!entry.getHeader()) continue;
                 if (i != 1) {
-                    out.print(csvDelimiter);
+                    out.print(entry.getDelimiter());
                 }
                 out.print(value);
             }
-            if (entry.getAddHeader()) {
+            if (entry.getHeader()) {
                 out.println();
             }
 
@@ -228,19 +234,19 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                         part_value = "";
                     }
                     if (i != 0) {
-                        out.print(csvDelimiter);
+                        out.print(entry.getDelimiter());
                     }
                     if (value != null && !"".equals(value)) {
-                        value = fieldConverter.toFormat(cast_fields.get(i), value);
+                        value = stringConverter.toFormat(cast_fields.get(i), value);
                         if (value != null && !"".equals(value)) {
-                            if (!"".equals(csvQuoteChar) && value.contains(csvQuoteChar)) {
-                                if ("".equals(csvEscapeChar)) {
-                                    value = value.replace(csvQuoteChar, csvQuoteChar + csvQuoteChar);
+                            if (!"".equals(entry.getQuoteChar()) && value.contains(entry.getQuoteChar())) {
+                                if ("".equals(entry.getEscapeChar())) {
+                                    value = value.replace(entry.getQuoteChar(), entry.getQuoteChar() + entry.getQuoteChar());
                                 } else {
-                                    value = value.replace(csvQuoteChar, csvEscapeChar + csvQuoteChar);
+                                    value = value.replace(entry.getQuoteChar(), entry.getEscapeChar() + entry.getQuoteChar());
                                 }
                             }
-                            out.print(csvQuoteChar + value + csvQuoteChar);
+                            out.print(entry.getQuoteChar() + value + entry.getQuoteChar());
                         }
                     }
                 }
@@ -390,7 +396,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
             FileObject tmpFs = manager.resolveFile("tmp:///export");
             try (Connection c = getConnection()) {
                 for (EntryConfig entry : files) {
-                    //log.debug("ZipEntryConfig: " + entry.getName() + " " + entry.getMsg() + " " + entry.getSql());
+                    //log.debug("EntryConfig: " + entry.getName() + " " + entry.getMsg() + " " + entry.getSql());
                     FileObject csvFile = tmpFs.resolveFile(entry.getName());
                     String extension = csvFile.getName().getExtension().toLowerCase();
                     if (csf.getOutputStreamCompressorNames().contains(extension)) {
@@ -414,7 +420,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
             } finally {
                 l.message("Closed Connection");
             }
-            if (tmpFs.findFiles(new FileTypeSelector(FileType.FILE)).length > 0) {
+            if (tmpFs.findFiles(new FileTypeSelector(FileType.FILE)) != null) {
                 for (DestinationConfig dst : destinations) {
                     l.message("Uploading file to " + dst.getUri().toString());
                     log.debug("Destination URI: " + dst.getUri().toString() + " Options: " + dst.getOptions().toString());
