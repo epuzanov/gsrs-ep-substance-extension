@@ -271,7 +271,7 @@ gsrs.scheduled-tasks.list+= {
 ```
 
 ### gsrs.module.substance.tasks.UpdateSubstanceReferenceTaskInitializer
-The SubstanceReferenceProcessor canbe used to fix broken substance references after substances import from external GSRS system.
+The SubstanceReferenceProcessor can be used to fix broken substance references after substances import from external GSRS system.
 
 #### Configuration
 
@@ -280,6 +280,74 @@ gsrs.scheduled-tasks.list+= {
     "scheduledTaskClass" : "gsrs.module.substance.tasks.UpdateSubstanceReferenceTaskInitializer",
     "parameters" : {
         "autorun": false
+    }
+}
+```
+
+### gsrs.module.substance.tasks.ScheduledSQLExportTask
+The ScheduledSQLExportTask can be used for dump large amount of information from GSRS database into CSV files.
+Multiple CSV files can be created, compressed (optional) and sent to the multiple destinations. Following
+destinations protocols are supported: file://, ftp://, ftps://, sftp://.
+If the returned string value need to be additionally converted to some custom format,
+then fields name in the SQL query must be specified in the following form "CAST_TO_<FORMAT>_<FIELDS_NAME>".
+The custom strings format support must be implemented in the toFormat method of the custom StringConverted class.
+
+#### Dependencies
+* org.apache.commons.vfs2
+* org.apache.commons.compress
+* org.apache.commons.net
+* com.jcraft.jsch
+
+#### Configuration
+
+```
+gsrs.scheduled-tasks.list+= {
+    "scheduledTaskClass" : "gsrs.module.substance.tasks.ScheduledSQLExportTask",
+    "parameters" : {
+        "cron":"0 0 0 * * ?",
+        "autorun":false,
+        "name":"Target System Name",
+        "stringConverter": "gsrs.module.substance.converters.DefaultStringConverter",
+        "destinations": [
+            {
+                "uri": "file:///home/srs/exports/Names.zip"
+            },
+            {
+                "uri":"sftp://target_server/inbox/Names.tar.gz",
+                "user":"username",
+                "password":"PASSWORD",
+                "userDirIsRoot":"false",
+                "strictHostKeyChecking":"no",
+                "sessionTimeoutMillis":"10000"
+            },
+            {
+                "uri":"ftp://target_server_2/gsrs_exports/",
+                "user":"username",
+                "password":"PASSWORD",
+                "userDirIsRoot":"true",
+                "pasiveMode":"true",
+            }
+        ],
+        "files": [
+            {
+                "name":"Names.csv",
+                "msg":"Display Names",
+                "encoding":"ISO-8859-1",
+                "delimiter":";",
+                "quoteChar":"\"",
+                "escapeChar":"",
+                "header":true
+                "sql":"""
+SELECT
+    S.APPROVAL_ID AS UNII,
+    COALESCE(N.FULL_NAME, N.NAME) AS NAME
+FROM IX_GINAS_SUBSTANCE S
+LEFT JOIN IX_GINAS_NAME N ON (S.UUID = N.OWNER_UUID)
+WHERE S.DEPRECATED = '0'
+    AND N.DISPLAY_NAME = '1'
+"""
+            }
+        ]
     }
 }
 ```
