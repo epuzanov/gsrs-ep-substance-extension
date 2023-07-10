@@ -122,11 +122,15 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                 DefaultFileSystemConfigBuilder.getInstance().setUserAuthenticator(opts, auth);
             }
             if (dst.size() > 0) {
-                FileSystemManager manager = new StandardFileSystemManager();
-                ((StandardFileSystemManager) manager).init();
+                StandardFileSystemManager manager = new StandardFileSystemManager();
+                manager.init();
                 DelegatingFileSystemOptionsBuilder delegate = new DelegatingFileSystemOptionsBuilder(manager);
                 for (Map.Entry<String, String> entry : dst.entrySet()) {
-                    delegate.setConfigString(opts, scheme, entry.getKey(), (String) entry.getValue());
+                    try {
+                        delegate.setConfigString(opts, scheme, entry.getKey(), entry.getValue());
+                    } catch (Exception e) {
+                        log.error("The delegating configuration builder cant set value \"" + entry.getValue() + "\" for the key \"" + entry.getKey() + "\" of the scheme \"" + scheme + "\".");
+                    }
                 }
                 manager.close();
             }
