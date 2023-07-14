@@ -1,13 +1,10 @@
 package gsrs.module.substance.tasks;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import gsrs.scheduledTasks.ScheduledTaskInitializer;
 import gsrs.scheduledTasks.SchedulerPlugin;
-import gsrs.scheduledTasks.SchedulerPlugin.TaskListener;
 import gsrs.springUtils.StaticContextAccessor;
 import gsrs.module.substance.converters.DefaultStringConverter;
 import gsrs.module.substance.converters.StringConverter;
@@ -15,22 +12,18 @@ import gsrs.module.substance.converters.StringConverter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.OutputStreamWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.sql.Clob;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -38,13 +31,15 @@ import javax.sql.DataSource;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.apache.commons.compress.compressors.CompressorException;
 import org.apache.commons.compress.compressors.CompressorOutputStream;
 import org.apache.commons.compress.compressors.CompressorStreamFactory;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.QuoteMode;
 import org.apache.commons.vfs2.FileObject;
 import org.apache.commons.vfs2.FileSelector;
 import org.apache.commons.vfs2.FileSystemException;
@@ -83,26 +78,25 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         private final String msg;
         private final String sql;
         private final String encoding;
-        private final String delimiter;
-        private final String quoteChar;
-        private final String escapeChar;
-        private final boolean header;
+        private final CSVFormat format;
 
         public EntryConfig (Map<String, Object> m) {
             this.name = (String) m.get("name");
             this.msg = (String) m.get("msg");
             this.sql = (String) m.get("sql");
             this.encoding = m.getOrDefault("encoding", "ISO-8859-1").toString();
-            this.header = m.containsKey("header") ? ((Boolean) m.get("header")).booleanValue() : true;
-            this.delimiter = m.getOrDefault("delimiter", ";").toString();
-            this.quoteChar = m.getOrDefault("quoteChar", "\"").toString();
-            this.escapeChar = m.getOrDefault("escapeChar", "").toString();
+            String delimiter = m.getOrDefault("delimiter", ",").toString();
+            this.format =  CSVFormat.Builder
+                                    .create()
+                                    .setDelimiter(delimiter)
+                                    .setHeader(m.getOrDefault("header", "").toString().isEmpty() ? null : m.get("header").toString().trim().split(delimiter))
+                                    .setQuote(m.getOrDefault("quoteChar", "\"").toString().isEmpty() ? null : Character.valueOf(m.getOrDefault("quoteChar", "\"").toString().charAt(0)))
+                                    .setQuoteMode(QuoteMode.valueOf(m.getOrDefault("quoteMode", "NON_NUMERIC").toString()))
+                                    .setEscape(m.getOrDefault("escapeChar", "").toString().isEmpty() ? null : Character.valueOf(m.get("escapeChar").toString().charAt(0)))
+                                    .setNullString(m.getOrDefault("nullString", "").toString())
+                                    .setRecordSeparator(m.getOrDefault("recordSeparator", "\r\n").toString())
+                                    .build();
         }
-
-        public boolean getHeader() {
-            return header;
-        }
-
     }
 
     @Data
@@ -144,16 +138,16 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
     }
 
     @JsonProperty(value="files")
-    public void setFiles(Map m) {
-        for (Object value : m.values()) {
-            files.add(new EntryConfig((Map<String, Object>) value));
+    public void setFiles(Map<String, Map<String, Object>> m) {
+        for (Map<String, Object> value : m.values()) {
+            files.add(new EntryConfig(value));
         }
     }
 
     @JsonProperty(value="destinations")
-    public void setDestinations(Map m) throws FileSystemException, URISyntaxException {
-        for (Object value : m.values()) {
-            destinations.add(new DestinationConfig((Map<String, String>) value));
+    public void setDestinations(Map<String, Map<String, String>> m) throws FileSystemException, URISyntaxException {
+        for (Map<String, String> value : m.values()) {
+            destinations.add(new DestinationConfig(value));
         }
     }
 
@@ -171,9 +165,8 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         return dataSource.getConnection();
     }
 
-    private void makeCsvFile(EntryConfig entry, PrintStream out, ResultSet rs, TaskListener l) throws IOException {
+    private void makeCsvFile(EntryConfig entry, OutputStream outputStream, ResultSet rs, SchedulerPlugin.TaskListener l) throws IOException {
         ResultSetMetaData metadata = null;
-        Clob clob_value = null;
         String value = "";
         String part_value = "";
         double denom = 0;
@@ -185,7 +178,10 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         l.message("Get " + entry.getMsg());
         //log.debug("Get " + entry.getMsg());
 
-        try {
+        try (
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream, entry.getEncoding());
+            CSVPrinter out = new CSVPrinter(outputStreamWriter, entry.getFormat());
+        ) {
             metadata = rs.getMetaData();
             ccount = metadata.getColumnCount();
             // Output header
@@ -200,14 +196,6 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                 } else {
                     cast_fields.add("NONE");
                 }
-                if (!entry.getHeader()) continue;
-                if (i != 1) {
-                    out.print(entry.getDelimiter());
-                }
-                out.print(value);
-            }
-            if (entry.getHeader()) {
-                out.println();
             }
 
             // Get total
@@ -237,22 +225,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                         value = value + part_value;
                         part_value = "";
                     }
-                    if (i != 0) {
-                        out.print(entry.getDelimiter());
-                    }
-                    if (value != null && !"".equals(value)) {
-                        value = stringConverter.toFormat(cast_fields.get(i), value);
-                        if (value != null && !"".equals(value)) {
-                            if (!"".equals(entry.getQuoteChar()) && value.contains(entry.getQuoteChar())) {
-                                if ("".equals(entry.getEscapeChar())) {
-                                    value = value.replace(entry.getQuoteChar(), entry.getQuoteChar() + entry.getQuoteChar());
-                                } else {
-                                    value = value.replace(entry.getQuoteChar(), entry.getEscapeChar() + entry.getQuoteChar());
-                                }
-                            }
-                            out.print(entry.getQuoteChar() + value + entry.getQuoteChar());
-                        }
-                    }
+                    out.print(stringConverter.toFormat(cast_fields.get(i), value));
                 }
                 out.println();
 
@@ -265,7 +238,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         } catch (Exception e) {
             log.error("Exception:", e);
         } finally {
-            out.close();
+            outputStream.close();
         }
     }
 
@@ -387,7 +360,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         rfo.copyFrom(lfo, selector);
     }
 
-    public void run(SchedulerPlugin.JobStats stats, TaskListener l) {
+    public void run(SchedulerPlugin.JobStats stats, SchedulerPlugin.TaskListener l) {
         StandardFileSystemManager manager = new StandardFileSystemManager();
         OutputStream outputStream = null;
         CompressorStreamFactory csf = new CompressorStreamFactory();
@@ -410,12 +383,11 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                     } else {
                         outputStream = csvFile.getContent().getOutputStream();
                     }
-                    PrintStream out = new PrintStream(outputStream, false, entry.getEncoding());
                     try (PreparedStatement s = c.prepareStatement(entry.getSql(),
                                                                   ResultSet.TYPE_SCROLL_INSENSITIVE,
                                                                   ResultSet.CONCUR_READ_ONLY)) {
                         try (ResultSet rs = s.executeQuery()) {
-                            makeCsvFile(entry, out, rs, l);
+                            makeCsvFile(entry, outputStream, rs, l);
                         }
                     }
                 }

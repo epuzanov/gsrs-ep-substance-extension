@@ -336,7 +336,7 @@ gsrs.scheduled-tasks.list+= {
                 "delimiter":";",
                 "quoteChar":"\"",
                 "escapeChar":"",
-                "header":true
+                "header":"UNII;NAME",
                 "sql":"""
 SELECT
     S.APPROVAL_ID AS UNII,
