@@ -93,40 +93,6 @@ ix.ginas.export.exporterfactories.substances += {
 }
 ```
 
-### gsrs.module.substance.exporters.JsonPortableExporterFactory
-The JsonPortableExporter can be used for exporting substances in the GSRS portable format.
-
-#### Dependencies
-* org.apache.cxf.cxf-rt-rs-security-jose
-
-#### Configuration
-
-```
-gsrs.crypto = {
-    #"jsonWebKeys": { include "file:///etc/gsrs/conf/keystore.jwks.json" },
-    "jsonWebKeys": { "filename": "conf/keystore.jwks", "password": "VerySecurePasswordLongerWhen9Characters" },
-    "privateKeyId": "gsrs.ncats.nih.gov",
-    "contentAlgorithm": "A256GCM",
-    "keyAlgorithm": "RSA-OAEP-256",
-    "zipAlgorithm": "DEF",
-    "signatureAlgorithm": "RS256",
-    "strictVerification": false,
-    "metadataTemplate": "Exported on ${date} by ${user} from ${verified} source ${source} (SRS schema version:${version})",
-    "dateFormat": "yyyy-MM-dd HH:mm:ss"
-}
-
-ix.ginas.export.exporterfactories.substances += {
-    "exporterFactoryClass": "gsrs.module.substance.exporters.JsonPortableExporterFactory",
-    "parameters": {
-        "format": {
-            "extension": "gsrsp",
-            "displayName": "Json Portable Export (gsrsp) File"
-        },
-        "originBase": "https://srs.public.instance.name/ginas/app/beta/substances/"
-    }
-}
-```
-
 ### gsrs.module.substance.indexers.JmespathIndexValueMaker
 The JmespathIndexvalueMaker canbe used for creating of the custom indexes. It uses Jmespath expressions to select values from substances json.
 
