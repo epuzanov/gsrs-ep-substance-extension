@@ -114,7 +114,8 @@ public class UpdateSubstanceReferenceTaskInitializer extends ScheduledTaskInitia
             String srStr = sr.toString();
             log.trace("processing substance reference with ID {}", sr.uuid.toString());
             try {
-                entityProcessorFactory.getCombinedEntityProcessorFor(sr).preUpdate(sr);
+                EntityProcessor ep = entityProcessorFactory.getCombinedEntityProcessorFor(sr);
+                ep.getClass().getMethod("preUpdate", SubstanceReference.class).invoke(ep, sr);
             } catch (Exception ex) {
                 log.error("Error during processing: {}", ex.getMessage());
             }

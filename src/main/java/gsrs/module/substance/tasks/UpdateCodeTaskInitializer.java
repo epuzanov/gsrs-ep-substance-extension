@@ -115,7 +115,8 @@ public class UpdateCodeTaskInitializer extends ScheduledTaskInitializer {
             log.trace("processing code with ID {}", code.uuid.toString());
             int hash = codeHash(code);
             try {
-                entityProcessorFactory.getCombinedEntityProcessorFor(code).preUpdate(code);
+                EntityProcessor ep = entityProcessorFactory.getCombinedEntityProcessorFor(code);
+                ep.getClass().getMethod("preUpdate", Code.class).invoke(ep, code);
             } catch (Exception ex) {
                 log.error("Error during processing: {}", ex.getMessage());
             }

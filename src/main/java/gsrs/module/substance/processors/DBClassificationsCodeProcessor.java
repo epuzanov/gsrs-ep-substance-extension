@@ -36,16 +36,16 @@ public class DBClassificationsCodeProcessor implements EntityProcessor<Code> {
         this(new HashMap<String, Object>());
     }
 
-    public DBClassificationsCodeProcessor(Map m) {
+    public DBClassificationsCodeProcessor(Map<String, Object> m) {
         String dataSourceQualifier = (String) m.get("dataSourceQualifier");
         if (dataSourceQualifier != null && !dataSourceQualifier.isEmpty()) {
             this.datasource = StaticContextAccessor.getBeanQualified(DataSource.class, dataSourceQualifier);
-        } else if (m.containsKey("datasource")) {
-            Map<String, String> dsconfig = (Map<String, String>) m.get("datasource");
+        } else if (m.get("datasource") instanceof Map) {
+            Map<?, ?> dsconfig = (Map<?, ?>) m.get("datasource");
             this.datasource = DataSourceBuilder.create()
-                                                .url(dsconfig.get("url"))
-                                                .username(dsconfig.get("username"))
-                                                .password(dsconfig.get("password"))
+                                                .url((String)dsconfig.get("url"))
+                                                .username((String)dsconfig.get("username"))
+                                                .password((String)dsconfig.get("password"))
                                                 .build();
         } else {
             this.datasource = StaticContextAccessor.getBean(DataSource.class);
