@@ -317,3 +317,27 @@ WHERE S.DEPRECATED = '0'
     }
 }
 ```
+
+### ix.ginas.utils.validation.validators.JmespathValidator
+The JmespathValidator can to be used for creating the custom GSRS validations rules. It uses Jmespath expressions to validate the substances json.
+
+#### Dependencies
+* io.burt.jmespath-jackson
+
+#### Configuration
+
+```
+gsrs.validators.substances += {
+    "validatorClass" = "ix.ginas.utils.validation.validators.JmespathValidator",
+    "newObjClass" = "ix.ginas.models.v1.Substance",
+    "configClass" = "SubstanceValidatorConfig",
+    "parameters"= {
+        "expressions" = [
+            {"messageType": "ERROR", "messageTemplate": "Only single %s Code allowed.", "expression": "new.codes[?type=='PRIMARY' && codeSystem=='MyCodeSystem'].codeSystem | [1]"},
+            {"messageType": "ERROR", "messageTemplate": "The MyCodeSystem Code can not be changed.", "expression": "values(@)[*].codes[?type=='PRIMARY' && codeSystem=='MyCodeSystem'].code | [0] != [1]"},
+            {"messageType": "ERROR", "messageTemplate": "More then One Note with Public Reference is not allowed.", "expression": "new.notes[?length(references[? publicDomain==`true` && contains(tags, 'PUBLIC_DOMAIN_RELEASE') && length(access) == `0`]) > `0`].note | [1]"}.
+            {"messageType": "ERROR", "messageTemplate": "Non Public records must have a PUBLIC DOMAIN reference without a '%s' tag", "expression": "to_array(new)[?length(access) > `0`].references[] | [? publicDomain==`true` && contains(tags, 'PUBLIC_DOMAIN_RELEASE') && length(access) == `0`].tags[0]"}
+        ]
+    }
+}
+```
