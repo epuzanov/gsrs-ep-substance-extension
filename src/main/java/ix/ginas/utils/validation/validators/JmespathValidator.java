@@ -59,6 +59,7 @@ public class JmespathValidator extends AbstractValidatorPlugin<Substance>{
                 return false;
             }
             return true;
+        }
 
         public void validate(JsonNode tree, ValidatorCallback callback) {
             log.debug("Validation Tree: " + tree.toString());
