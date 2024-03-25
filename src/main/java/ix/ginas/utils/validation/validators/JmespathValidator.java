@@ -62,11 +62,10 @@ public class JmespathValidator extends AbstractValidatorPlugin<Substance>{
         }
 
         public void validate(JsonNode tree, ValidatorCallback callback) {
-            log.debug("Validation Tree: " + tree.toString());
             log.debug("Validation Expression: " + rawExpression);
             JsonNode results = expression.search(tree);
             log.debug("Validation Results: " + results.toString());
-            if (results != null && !results.isNull() && !(results.isBoolean() && !results.asBoolean())) {
+            if (results != null && !results.isNull() && !(results.isArray() && results.size() < 1) && !(results.isBoolean() && !results.asBoolean())) {
                 if (!results.isArray()) {
                     results = (JsonNode) new ObjectMapper().createArrayNode().add(results);
                 }
@@ -90,6 +89,7 @@ public class JmespathValidator extends AbstractValidatorPlugin<Substance>{
         ObjectMapper mapper = new ObjectMapper();
         try {
             JsonNode tree = mapper.readTree("{\"new\":" + writer.writeValueAsString(objnew) + ",\"old\":" + writer.writeValueAsString(objold) + "}");
+            log.debug("Validation Tree: " + tree.toString());
             updateReferences(tree.get("new"));
             updateReferences(tree.get("old"));
             for (ValidatorExpression expression: expressions) {
@@ -111,6 +111,7 @@ public class JmespathValidator extends AbstractValidatorPlugin<Substance>{
     }
 
     private void updateReferences(JsonNode tree) {
+        if (tree == null || tree.isNull()) return;
         ArrayNode references = (ArrayNode)tree.at("/references");
         Map<String, Integer> refMap = new HashMap<>();
         for (int i = 0; i < references.size(); i++) {

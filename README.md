@@ -334,7 +334,7 @@ gsrs.validators.substances += {
     "parameters"= {
         "expressions" = [
             {"messageType": "ERROR", "messageTemplate": "Only single %s Code allowed.", "expression": "new.codes[?type=='PRIMARY' && codeSystem=='MyCodeSystem'].codeSystem | [1]"},
-            {"messageType": "ERROR", "messageTemplate": "The MyCodeSystem Code can not be changed.", "expression": "values(@)[*].codes[?type=='PRIMARY' && codeSystem=='MyCodeSystem'].code | [0] != [1]"},
+            {"messageType": "ERROR", "messageTemplate": "The MyCodeSystem Code can not be changed.", "expression": "values(@)[*].codes[?type=='PRIMARY' && codeSystem=='MyCodeSystem'].code | [] | [0] != [1] && [1] != `null`"},
             {"messageType": "ERROR", "messageTemplate": "More then One Note with Public Reference is not allowed.", "expression": "new.notes[?length(references[? publicDomain==`true` && contains(tags, 'PUBLIC_DOMAIN_RELEASE') && length(access) == `0`]) > `0`].note | [1]"}.
             {"messageType": "ERROR", "messageTemplate": "Non Public records must have a PUBLIC DOMAIN reference without a '%s' tag", "expression": "to_array(new)[?length(access) > `0`].references[] | [? publicDomain==`true` && contains(tags, 'PUBLIC_DOMAIN_RELEASE') && length(access) == `0`].tags[0]"}
         ]
