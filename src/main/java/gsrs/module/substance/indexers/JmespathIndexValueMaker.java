@@ -5,8 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
+import gsrs.module.substance.utils.SplitFunction;
+
 import io.burt.jmespath.JmesPath;
 import io.burt.jmespath.Expression;
+import io.burt.jmespath.RuntimeConfiguration;
+import io.burt.jmespath.function.FunctionRegistry;
 import io.burt.jmespath.jackson.JacksonRuntime;
 
 import ix.core.controllers.EntityFactory;
@@ -47,7 +51,12 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
         private final boolean sortable;
 
         public IndexExpression(Map<String, String> m) {
-            JmesPath<JsonNode> jmespath = new JacksonRuntime();
+            FunctionRegistry customFunctions = FunctionRegistry.defaultRegistry().extend(
+                                                           new SplitFunction());
+            RuntimeConfiguration configuration = new RuntimeConfiguration.Builder()
+                                       .withFunctionRegistry(customFunctions)
+                                       .build();
+            JmesPath<JsonNode> jmespath = new JacksonRuntime(configuration);
             this.type = m.getOrDefault("type", "String");
             this.ranges = Arrays.asList(m.getOrDefault("ranges", "").split(" "));
             this.expression = (Expression<JsonNode>) jmespath.compile(m.get("expression"));

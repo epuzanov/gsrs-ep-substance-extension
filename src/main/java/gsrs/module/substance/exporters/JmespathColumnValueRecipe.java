@@ -1,8 +1,12 @@
 package gsrs.module.substance.exporters;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import gsrs.module.substance.utils.SplitFunction;
+
 import io.burt.jmespath.JmesPath;
 import io.burt.jmespath.Expression;
+import io.burt.jmespath.RuntimeConfiguration;
+import io.burt.jmespath.function.FunctionRegistry;
 import io.burt.jmespath.jackson.JacksonRuntime;
 import ix.ginas.exporters.*;
 import java.util.Date;
@@ -36,7 +40,12 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
     }
 
     static <T>  ColumnValueRecipe<T> create(String columnName, String expression, String delimiter, String datetime) {
-        JmesPath<JsonNode> jmespath = new JacksonRuntime();
+        FunctionRegistry customFunctions = FunctionRegistry.defaultRegistry().extend(
+                                                       new SplitFunction());
+        RuntimeConfiguration configuration = new RuntimeConfiguration.Builder()
+                                   .withFunctionRegistry(customFunctions)
+                                   .build();
+        JmesPath<JsonNode> jmespath = new JacksonRuntime(configuration);
         SimpleDateFormat dtf = null;
         try {
             dtf = new SimpleDateFormat(datetime);
