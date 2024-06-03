@@ -2,6 +2,7 @@ package gsrs.module.substance.exporters;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import gsrs.module.substance.utils.SplitFunction;
+import gsrs.module.substance.utils.UniqueFunction;
 
 import io.burt.jmespath.JmesPath;
 import io.burt.jmespath.Expression;
@@ -41,7 +42,8 @@ public class JmespathColumnValueRecipe<T> implements ColumnValueRecipe<T> {
 
     static <T>  ColumnValueRecipe<T> create(String columnName, String expression, String delimiter, String datetime) {
         FunctionRegistry customFunctions = FunctionRegistry.defaultRegistry().extend(
-                                                       new SplitFunction());
+                                                       new SplitFunction(),
+                                                       new UniqueFunction());
         RuntimeConfiguration configuration = new RuntimeConfiguration.Builder()
                                    .withFunctionRegistry(customFunctions)
                                    .build();

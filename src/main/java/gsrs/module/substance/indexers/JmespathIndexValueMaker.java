@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import gsrs.module.substance.utils.SplitFunction;
+import gsrs.module.substance.utils.UniqueFunction;
 
 import io.burt.jmespath.JmesPath;
 import io.burt.jmespath.Expression;
@@ -52,7 +53,8 @@ public class JmespathIndexValueMaker implements IndexValueMaker<Substance> {
 
         public IndexExpression(Map<String, String> m) {
             FunctionRegistry customFunctions = FunctionRegistry.defaultRegistry().extend(
-                                                           new SplitFunction());
+                                                           new SplitFunction(),
+                                                           new UniqueFunction());
             RuntimeConfiguration configuration = new RuntimeConfiguration.Builder()
                                        .withFunctionRegistry(customFunctions)
                                        .build();

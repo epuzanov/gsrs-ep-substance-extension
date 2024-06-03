@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import gsrs.validator.ValidatorConfig;
 import gsrs.module.substance.utils.SplitFunction;
+import gsrs.module.substance.utils.UniqueFunction;
 
 import io.burt.jmespath.JmesPath;
 import io.burt.jmespath.Expression;
@@ -48,7 +49,8 @@ public class JmespathValidator extends AbstractValidatorPlugin<Substance>{
 
         public ValidatorExpression(Map<String, String> m) {
             FunctionRegistry customFunctions = FunctionRegistry.defaultRegistry().extend(
-                                                           new SplitFunction());
+                                                           new SplitFunction(),
+                                                           new UniqueFunction());
             RuntimeConfiguration configuration = new RuntimeConfiguration.Builder()
                                        .withFunctionRegistry(customFunctions)
                                        .build();
