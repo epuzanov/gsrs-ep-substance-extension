@@ -206,7 +206,7 @@ gsrs.entityProcessors += {
 ```
 
 ### gsrs.module.substance.processors.SubstanceReferenceProcessor
-The SubstanceReferenceProcessor canbe used to fix broken substance references after substances import from external GSRS system.
+The SubstanceReferenceProcessor can be used to fix broken substance references after substances import from external GSRS system.
 
 #### Configuration
 
@@ -218,6 +218,24 @@ gsrs.entityProcessors += {
         "codeSystemPatterns" : [
             {"pattern": "^[0-9A-Z]{10}$", "codeSystem": "FDA UNII"}
         ]
+    }
+}
+```
+
+### gsrs.module.substance.processors.SetAccessCodeProcessor
+The SetAccessCodeProcessor can be used to force the access value for the specific code system.
+
+#### Configuration
+
+```
+gsrs.entityProcessors += {
+    "class":"ix.ginas.models.v1.Code",
+    "processor":"gsrs.module.substance.processors.SetAccessCodeProcessor",
+    "with":{
+        "codeSystemAccess": {
+            "BDNUM": ["protected"],
+            "*": []
+        }
     }
 }
 ```
