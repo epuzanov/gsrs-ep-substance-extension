@@ -205,6 +205,36 @@ gsrs.entityProcessors += {
 }
 ```
 
+### gsrs.module.substance.processors.DBClassificationsCodeProcessor
+The DBClassificationsCodeProcessor can be used for creating the comment string for classification codes using SQL database as the source. The query must return 4 fields.
+The first field contains COMMENTS text, the second field contains URL, the third field contains DOC_TYPE of the Reference and the fourth field contains CITATION of the Reference.
+The second, third and fourth fields can return NULL values.
+
+#### Configuration
+
+```
+gsrs.entityProcessors += {
+    "entityClassName" = "ix.ginas.models.v1.Code",
+    "processor" = "gsrs.module.substance.processors.DBClassificationsCodeProcessor",
+    "with" = {
+        "codeSystem" = "PV",
+        "query" = """SELECT
+'ROOT|' || SUB_CATEGORY || '|' || CLASSIFICATION,
+URL,
+REF_DOC_TYPE,
+REF_CITATION
+FROM CLASSIFICATIONS
+WHERE CODE = ?
+""",
+        "datasource" = {
+            "url" = "jdbc:oracle:thin:@//db-server:1521/CLASSIFICATIONS",
+            "username" = "gsrs",
+            "password" = "somepassword"
+        }
+    }
+}
+```
+
 ### gsrs.module.substance.processors.SubstanceReferenceProcessor
 The SubstanceReferenceProcessor can be used to fix broken substance references after substances import from external GSRS system.
 
