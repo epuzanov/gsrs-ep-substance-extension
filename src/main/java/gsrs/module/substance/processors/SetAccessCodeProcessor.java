@@ -27,23 +27,21 @@ public class SetAccessCodeProcessor implements EntityProcessor<Code>{
     @Autowired
     private GroupService groupService;
 
-    private Map<String, Object> with;
+    private Map<String, Map<String, Map<Integer, String>>> with;
     private Map<String, Set<Group>> codeSystemAccess;
     private Set<Group> defaultAccess;
 
-    public SetAccessCodeProcessor(Map<String, Object> with){
+    public SetAccessCodeProcessor(Map<String, Map<String, Map<Integer, String>>> with){
         this.with = with;
     }
 
     public void addGroupsIfNeeded(){
         Map<String, Set<Group>> csa = new HashMap<String, Set<Group>>();
-        for (Map.Entry<String, Object> e : ((Map<String, Object>) with.getOrDefault("codeSystemAccess", new HashMap<String, Object>())).entrySet()) {
+        for (Map.Entry<String, Map<Integer, String>> e : with.getOrDefault("codeSystemAccess", new HashMap<String, Map<Integer, String>>()).entrySet()) {
             Set<Group> access = new LinkedHashSet<Group>();
-            Map<Object, String> group_list = (Map<Object, String>)e.getValue();
+            Map<Integer, String> group_list = e.getValue();
             if (group_list != null) {
-                System.out.println(group_list);
                 for (String groupName : group_list.values()){
-                    System.out.println(groupName);
                     access.add(groupService.registerIfAbsent(groupName));
                 }
             }
