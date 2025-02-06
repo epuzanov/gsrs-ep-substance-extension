@@ -270,20 +270,6 @@ gsrs.entityProcessors += {
 }
 ```
 
-### gsrs.module.substance.tasks.UpdateCodeTaskInitializer
-The UpdateCodeTaskInitializer task can be used for updating All Codes attributes (comments, url, access) in the GSRS
-
-#### Configuration
-
-```
-gsrs.scheduled-tasks.list+= {
-    "scheduledTaskClass" : "gsrs.module.substance.tasks.UpdateCodeTaskInitializer",
-    "parameters" : {
-        "autorun": false
-    }
-}
-```
-
 ### gsrs.module.substance.tasks.UpdateEntityTaskInitializer
 The UpdateEntityTaskInitializer task can be used for updating attributes from any Entity class in the GSRS
 The optional parameter "query" can be used for granular selection of the objects.
@@ -298,20 +284,6 @@ gsrs.scheduled-tasks.list+= {
         "entityClass": "ix.ginas.models.v1.Code",
         "query": "select uuid from Code where codeSystem = 'CAS'",
         "resetFields": ["url"],
-        "autorun": false
-    }
-}
-```
-
-### gsrs.module.substance.tasks.UpdateSubstanceReferenceTaskInitializer
-The SubstanceReferenceProcessor can be used to fix broken substance references after substances import from external GSRS system.
-
-#### Configuration
-
-```
-gsrs.scheduled-tasks.list+= {
-    "scheduledTaskClass" : "gsrs.module.substance.tasks.UpdateSubstanceReferenceTaskInitializer",
-    "parameters" : {
         "autorun": false
     }
 }
