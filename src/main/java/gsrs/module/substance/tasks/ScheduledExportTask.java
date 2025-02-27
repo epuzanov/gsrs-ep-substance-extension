@@ -27,7 +27,6 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.LocalDate;
@@ -739,7 +738,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
             SearchRequest sr = new SearchRequest.Builder()
                 .kind(Substance.class)
                 .fdim(0)
-                .query(URLEncoder.encode(sb.toString(), StandardCharsets.UTF_8.name()))
+                .query(sb.toString())
                 .top(Integer.MAX_VALUE)
                 .build();
             return new TransactionTemplate(transactionManager).execute(ts -> {

@@ -318,7 +318,7 @@ gsrs.scheduled-tasks.list+= {
         "autorun": false,
         "description": "Scheduled GSRS Export",
         "extension": "csv",
-        "query": "root_codes_codeSystem:%22%5EFDA%20UNII$%22%20AND%20root_lastEdited:[P1M TO 10E50]",
+        "query": "root_codes_codeSystem:\"^FDA UNII$\" AND root_lastEdited:[P1M TO 10E50]",
         "publicOnly": false,
         "username": "ADMIN",
         "parameters": {},
