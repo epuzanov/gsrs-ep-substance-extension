@@ -289,6 +289,83 @@ gsrs.scheduled-tasks.list+= {
 }
 ```
 
+
+### gsrs.module.substance.tasks.ScheduledExportTask
+The ScheduledExportTask can be used to run any GSRS export on schedule and send it result file to any VFS2 supported destinations.
+Following destinations protocols are supported: file://, ftp://, ftps://, sftp://, smtp://.
+The 'query' parameter supports the Period deffinition in the ISO-8601 calendar system format.
+The SMTP destinations supports mail body in HTML and PLAIN format. The report sended as the mail attachment.
+The size of the Mail can be limited by maxSize paramater.
+The CSV reports can be sendet within the mail body if the 'recordTemplate' parameters is provided.
+The 'recordTemplate' parameter supports the '{0}' format for fields index. The '%s' supported for 'recordTemplate' formatting as well,
+but it can not be combined with the field indexing approach.
+
+#### Dependencies
+* org.apache.commons.csv
+* org.apache.commons.vfs2
+* org.apache.commons.net
+* com.jcraft.jsch
+* jakarta.activation
+* jakarta.mail
+
+#### Configuration
+
+```
+gsrs.scheduled-tasks.list+= {
+    "scheduledTaskClass" : "gsrs.module.substance.tasks.ScheduledExportTask",
+    "parameters" : {
+        "cron": "0 10 1 * * ?",
+        "autorun": false,
+        "description": "Scheduled GSRS Export",
+        "extension": "csv",
+        "query": "root_codes_codeSystem:%22%5EFDA%20UNII$%22%20AND%20root_lastEdited:[P1M TO 10E50]",
+        "publicOnly": false,
+        "username": "ADMIN",
+        "parameters": {},
+        "destinations": [
+            {
+                "uri": "file:///home/srs/exports/export.csv"
+            },
+            {
+                "uri":"sftp://target_server/inbox/last_month_edited.csv",
+                "user":"username",
+                "password":"PASSWORD",
+                "userDirIsRoot":"false",
+                "strictHostKeyChecking":"no",
+                "sessionTimeoutMillis":"10000"
+            },
+            {
+                "uri":"ftp://target_server_2/gsrs_exports/",
+                "user":"username",
+                "password":"PASSWORD",
+                "userDirIsRoot":"true",
+                "pasiveMode":"true",
+            },
+            {
+                "uri": "smtp://mail.server.org:25",
+                "from": "gsrs@server.org",
+                "to": "some.user@server.org",
+                "subject": "Substances edited last month",
+                "body": "<h1>Substances</h1></br><table><tr><th>Approval ID</th><th>Display Name</th></tr>",
+                "recordTemplate": "<tr><td><a href='https://gsrs.ncats.nih.gov/ginas/app/ui/substances/{0}'>{1}</a></td><td>{2}</td></tr>",
+                "footer": "</table>",
+                "charset": "utf-8",
+                "maxSize": "10M"
+            },
+            {
+                "uri": "smtp://mail.server.org:25/last_month_edited.csv",
+                "from": "gsrs@server.org",
+                "to": "some.user@server.org",
+                "subject": "Substances edited last month",
+                "body": "Substances edited last month",
+                "maxSize": "10M"
+            }
+        ]
+    }
+}
+```
+
+
 ### gsrs.module.substance.tasks.ScheduledSQLExportTask
 The ScheduledSQLExportTask can be used for dump large amount of information from GSRS database into CSV files.
 Multiple CSV files can be created, compressed (optional) and sent to the multiple destinations. Following
