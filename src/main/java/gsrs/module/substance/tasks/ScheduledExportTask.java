@@ -508,6 +508,11 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
                 }
             }
             try {
+                CSVFormat format = CSVFormat.Builder
+                    .create(CSVFormat.RFC4180)
+                    .setHeader()
+                    .setSkipHeaderRecord(true)
+                    .build();
                 MimeMultipart multipart = new MimeMultipart();
                 MimeBodyPart messageBodyPart;
                 String mimetype;
@@ -523,7 +528,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
                                 if ("text/csv".equals(mimetype)) {
                                     CSVParser parser = CSVParser.parse(
                                         new InputStreamReader(srcFile.getContent().getInputStream()),
-                                        CSVFormat.RFC4180);
+                                        format);
                                     for (CSVRecord csvRecord : parser) {
                                         if (subst_columns.isEmpty()) {
                                             subst_columns = IntStream.range(0, csvRecord.size()).boxed().collect(Collectors.toList());
