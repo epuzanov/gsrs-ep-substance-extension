@@ -93,6 +93,87 @@ ix.ginas.export.exporterfactories.substances += {
 }
 ```
 
+### gsrs.module.substance.exporters.SQLExporterFactory
+The SQLExporter can be used for the exporting the substances information using SQL queries to the GSRS database. The results can be exportet as XLSX or CSV files compressed if needed.
+
+#### Dependencies
+* org.apache.commons.compress
+* org.apache.commons.csv
+* org.apache.poi
+
+#### Configuration
+
+```
+ix.ginas.export.exporterfactories.substances += {
+    "exporterFactoryClass": "gsrs.module.substance.exporters.SQLExporterFactory",
+    "parameters": {
+        "format": {
+            "extension": "dnames.xlsx",
+            "displayName": "Display Names (xlsx) File"
+        },
+        files: [
+            {
+                "name":"Names",
+                "format":"PostgreSQLCsv",
+                "header":"UNII,NAME",
+                "sql":"SELECT S.APPROVAL_ID AS UNII, COALESCE(N.FULL_NAME, N.NAME) AS NAME FROM IX_GINAS_SUBSTANCES S LEFT JOIN IX_GINAS_NAME N ON S.UUID = N.OWNER_UUID AND DISPLAY_NAME = '1'"
+            },
+            {
+                "name":"CAS",
+                "format":"PostgreSQLCsv",
+                "header":"UNII,CAS",
+                "sql":"SELECT S.APPROVAL_ID AS UNII, C.CODE AS CAS FROM IX_GINAS_SUBSTANCES S LEFT JOIN IX_GINAS_CODE C ON S.UUID = C.OWNER_UUID AND C.CODE_SYSTEM = 'CAS' AND C.TYPE = 'PRIMARY'"
+            }
+        ]
+    }
+}
+
+ix.ginas.export.exporterfactories.substances += {
+    "exporterFactoryClass": "gsrs.module.substance.exporters.SQLExporterFactory",
+    "parameters": {
+        "format": {
+            "extension": "cas.zip",
+            "displayName": "CAS Codes Report (zip) File"
+        },
+        files: [
+            {
+                "name":"names/Names.csv",
+                "encoding":"ISO-8859-1",
+                "delimiter":";",
+                "quoteChar":"\"",
+                "escapeChar":"",
+                "header":"UNII;NAME",
+                "sql":"""
+SELECT
+    S.APPROVAL_ID AS UNII,
+    COALESCE(N.FULL_NAME, N.NAME) AS NAME
+FROM IX_GINAS_SUBSTANCE S
+LEFT JOIN IX_GINAS_NAME N ON S.UUID = N.OWNER_UUID
+WHERE S.DEPRECATED = '0'
+    AND N.DISPLAY_NAME = '1'
+"""
+            },
+            {
+                "name":"codes/CAS.csv",
+                "encoding":"ISO-8859-1",
+                "format":"Default",
+                "header":"UNII,CAS",
+                "sql":"""
+SELECT
+    S.APPROVAL_ID AS UNII,
+    C.CODE AS CAS
+FROM IX_GINAS_SUBSTANCE S
+LEFT JOIN IX_GINAS_NAME C ON S.UUID = C.OWNER_UUID
+WHERE S.DEPRECATED = '0'
+    AND C.CODE_SYSTEM = 'CAS'
+    AND C.TYPE = 'PRIMARY'
+"""
+            }
+        ]
+    }
+}
+```
+
 ### gsrs.module.substance.indexers.JmespathIndexValueMaker
 The JmespathIndexvalueMaker canbe used for creating of the custom indexes. It uses Jmespath expressions to select values from substances json.
 
