@@ -54,7 +54,7 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
         this(new HashMap<String, Object>());
     }
 
-    public SubstanceReferenceProcessor(Map m) {
+    public SubstanceReferenceProcessor(Map<String, Object> m) {
         ObjectMapper mapper = new ObjectMapper();
         config = mapper.convertValue(m, SubstanceReferenceProcessorConfig.class);
     }

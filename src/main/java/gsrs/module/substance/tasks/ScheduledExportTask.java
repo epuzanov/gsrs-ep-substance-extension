@@ -570,7 +570,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
                     .create(CSVFormat.RFC4180)
                     .setHeader()
                     .setSkipHeaderRecord(true)
-                    .build();
+                    .get();
                 MimeMultipart multipart = new MimeMultipart();
                 MimeBodyPart messageBodyPart;
                 String mimetype;
@@ -710,11 +710,14 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
                 });
             Stream<Substance> substanceStream = getStreamSupplier();
             Stream<Substance> effectivelyFinalStream = filterStream(substanceStream, publicOnly, parameters);
+            @SuppressWarnings("unchecked")
             ExportProcess<Substance> p = exportService.createExport(emd,() -> effectivelyFinalStream);
             log.trace("p: " + (p==null ? "null" : "not null"));
             log.trace("publicOnly: " + publicOnly);
             l.message("Run export for " + extension + " extension.");
-            p.run(r->r.run(), out -> Unchecked.uncheck(() -> getExporterFor(extension, out, publicOnly, parameters)));
+            if (p != null) {
+                p.run(r->r.run(), out -> Unchecked.uncheck(() -> getExporterFor(extension, out, publicOnly, parameters)));
+            }
             return exportService.getFile(user.username, emd.getFilename());
         } catch (Exception e) {
             log.error("Error in ScheduledExportTask: " + e.getMessage());
@@ -726,7 +729,6 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
     private void uploadFile(ExportDir.ExportFile<ExportMetaData> file, SchedulerPlugin.TaskListener l) {
         l.message("Uploading file " + file.getFile().getName());
         StandardFileSystemManager manager = new StandardFileSystemManager();
-        OutputStream outputStream = null;
         LocalDate ld = TimeUtil.getCurrentLocalDate();
         String date = ld.format(DateTimeFormatter.ISO_LOCAL_DATE);
         String fname = fileNameGenerator().apply(date) + "." + extension;
@@ -767,6 +769,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         log.trace("create params");
 
         log.trace("gsrsExportConfiguration: " + (gsrsExportConfiguration==null ? "null" : "not null"));
+        @SuppressWarnings("unchecked")
         ExporterFactory<Substance> factory = gsrsExportConfiguration.getExporterFor(substanceEntityService.getContext(), params);
 
         log.trace("factory: " + factory);
@@ -787,6 +790,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
 
     }
 
+    @SuppressWarnings("unchecked")
     private Stream<Substance> getStreamSupplier() throws UnsupportedEncodingException {
         if (query != null && !query.isEmpty()) {
             Matcher m = PERIOD_PAT.matcher(query);

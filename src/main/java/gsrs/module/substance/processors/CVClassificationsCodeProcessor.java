@@ -42,7 +42,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
-    private CachedSupplier initializer = CachedSupplier.runOnceInitializer(this::addCvDomainIfNeeded);
+    private CachedSupplier<Void> initializer = CachedSupplier.runOnceInitializer(this::addCvDomainIfNeeded);
 
     private CVClassificationsCodeProcessorConfig config;
 
@@ -92,7 +92,7 @@ public class CVClassificationsCodeProcessor implements EntityProcessor<Code> {
         this(new HashMap<String, Object>());
     }
 
-    public CVClassificationsCodeProcessor(Map m) {
+    public CVClassificationsCodeProcessor(Map<String, Object> m) {
         ObjectMapper mapper = new ObjectMapper();
         config = mapper.convertValue(m, CVClassificationsCodeProcessorConfig.class);
     }

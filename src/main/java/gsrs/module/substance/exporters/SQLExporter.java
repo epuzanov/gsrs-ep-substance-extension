@@ -127,7 +127,7 @@ public class SQLExporter implements Exporter<Substance> {
                 .setEscape(m.get("escapeChar") != null ? Character.valueOf(String.valueOf(m.get("escapeChar")).charAt(0)) : format.getEscapeCharacter())
                 .setNullString((String) m.getOrDefault("nullString", format.getNullString()))
                 .setRecordSeparator((String) m.getOrDefault("recordSeparator", format.getRecordSeparator()))
-                .build();
+                .get();
         }
     }
 
