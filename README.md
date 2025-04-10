@@ -21,8 +21,9 @@ The GsrsApiExporter can be used for the exporting of the substances directly to 
 #### Configuration
 
 ```
-ix.ginas.export.exporterfactories.substances += {
+ix.ginas.export.exporterfactories.substances.list.GsrsApiExporterFactory = {
     "exporterFactoryClass": "gsrs.module.substance.exporters.GsrsApiExporterFactory",
+    "order": 2000,
     "parameters": {
         "format": {
             "extension": "gsrsapi",
@@ -56,8 +57,9 @@ The JmespathSpreadsheetExporter can to be used for exporting substances to Excel
 #### Configuration
 
 ```
-ix.ginas.export.exporterfactories.substances += {
+ix.ginas.export.exporterfactories.substances.list.JmespathSpreadsheetExporterFactory = {
     "exporterFactoryClass": "gsrs.module.substance.exporters.JmespathSpreadsheetExporterFactory",
+    "order": 2100,
     "parameters": {
         "format": {
             "extension": "custom.xlsx",
@@ -104,8 +106,9 @@ The SQLExporter can be used for the exporting the substances information using S
 #### Configuration
 
 ```
-ix.ginas.export.exporterfactories.substances += {
+ix.ginas.export.exporterfactories.substances.list.DNamesSQLExporterFactory = {
     "exporterFactoryClass": "gsrs.module.substance.exporters.SQLExporterFactory",
+    "order": 2200,
     "parameters": {
         "format": {
             "extension": "dnames.xlsx",
@@ -128,8 +131,9 @@ ix.ginas.export.exporterfactories.substances += {
     }
 }
 
-ix.ginas.export.exporterfactories.substances += {
+ix.ginas.export.exporterfactories.substances.list.CasSQLExporterFactory = {
     "exporterFactoryClass": "gsrs.module.substance.exporters.SQLExporterFactory",
+    "order": 2300,
     "parameters": {
         "format": {
             "extension": "cas.zip",
@@ -183,9 +187,10 @@ The JmespathIndexvalueMaker canbe used for creating of the custom indexes. It us
 #### Configuration
 
 ```
-gsrs.indexers.list += {
+gsrs.indexers.list.JmespathIndexValueMaker = {
     "class" = "ix.ginas.models.v1.Substance",
     "indexer" = "gsrs.module.substance.indexers.JmespathIndexValueMaker",
+    "order" = 5000,
     "parameters" = {
         "expressions" = [
             {"index":"ATC Level 1", "expression": "codes[?codeSystem=='WHO-ATC' && starts_with(comments, 'ATC|')].comments", "regex":"ATC.([^\\Q|\\E]*).*"},
@@ -213,9 +218,10 @@ The CVClassificationsCodeProcessor can be used for creating the comment string f
 #### Configuration
 
 ```
-gsrs.entityProcessors += {
+gsrs.entityProcessors.list.CVClassificationsCodeProcessor1 = {
     "entityClassName" = "ix.ginas.models.v1.Code",
     "processor" = "gsrs.module.substance.processors.CVClassificationsCodeProcessor",
+    "order" = 2000,
     "with" = {
         "codeSystem" = "WHO-ATC",
         "prefix" = "ATC",
@@ -256,9 +262,10 @@ gsrs.entityProcessors += {
 Include Veterinary ATC codes dictionary from JSON file include LEVEL 5 codes.
 
 ```
-gsrs.entityProcessors += {
+gsrs.entityProcessors.list.CVClassificationsCodeProcessor = {
     "entityClassName" = "ix.ginas.models.v1.Code",
     "processor" = "gsrs.module.substance.processors.CVClassificationsCodeProcessor",
+    "order" = 2100,
     "with" = {
         "codeSystem" = "WHO-VATC",
         "prefix" = "VATC",
@@ -272,9 +279,10 @@ gsrs.entityProcessors += {
 Use the GSRS CV for storing ATC Classification information. And initially populate the CV from the JSON file if the cvVersion is greater then the version of the CV Domain.
 
 ```
-gsrs.entityProcessors += {
+gsrs.entityProcessors.list.CVClassificationsCodeProcessor = {
     "entityClassName" = "ix.ginas.models.v1.Code",
     "processor" = "gsrs.module.substance.processors.CVClassificationsCodeProcessor",
+    "order" = 2200,
     "with" = {
         "codeSystem" = "WHO-ATC",
         "prefix" = "ATC",
@@ -294,9 +302,10 @@ The second, third and fourth fields can return NULL values.
 #### Configuration
 
 ```
-gsrs.entityProcessors += {
+gsrs.entityProcessors.list.DBClassificationsCodeProcessor = {
     "entityClassName" = "ix.ginas.models.v1.Code",
     "processor" = "gsrs.module.substance.processors.DBClassificationsCodeProcessor",
+    "order" = 2300,
     "with" = {
         "codeSystem" = "PV",
         "query" = """SELECT
@@ -322,9 +331,10 @@ The SubstanceReferenceProcessor can be used to fix broken substance references a
 #### Configuration
 
 ```
-gsrs.entityProcessors += {
+gsrs.entityProcessors.list.SubstanceReferenceProcessor = {
     "entityClassName" = "ix.ginas.models.v1.SubstanceReference",
     "processor" = "gsrs.module.substance.processors.SubstanceReferenceProcessor",
+    "order" = 2400,
     "with" = {
         "codeSystemPatterns" : [
             {"pattern": "^[0-9A-Z]{10}$", "codeSystem": "FDA UNII"}
@@ -334,19 +344,20 @@ gsrs.entityProcessors += {
 ```
 
 ### gsrs.module.substance.processors.SetAccessCodeProcessor
-The SetAccessCodeProcessor can be used to force the access value for the specific code system.
+The SetAccessCodeProcessor can be used to force the access value for the specific code system. The empty list means public access.
 
 #### Configuration
 
 ```
-gsrs.entityProcessors += {
+gsrs.entityProcessors.list.SetAccessCodeProcessor = {
     "class":"ix.ginas.models.v1.Code",
     "processor":"gsrs.module.substance.processors.SetAccessCodeProcessor",
-    "with":{
+    "order":2500,
+    "parameters":{
         "codeSystemAccess": {
-            "BDNUM": ["protected"],
-            "*": []
-        }
+            "BDNUM": ["protected"]
+        },
+        "defaultAccess": []
     }
 }
 ```
@@ -359,8 +370,9 @@ The optional parameter "resetFields" can be used to nullify specified fields bef
 #### Configuration
 
 ```
-gsrs.scheduled-tasks.list+= {
+gsrs.scheduled-tasks.list.UpdateEntityTaskInitializer = {
     "scheduledTaskClass" : "gsrs.module.substance.tasks.UpdateEntityTaskInitializer",
+    "order": 2000,
     "parameters" : {
         "entityClass": "ix.ginas.models.v1.Code",
         "query": "select uuid from Code where codeSystem = 'CAS'",
@@ -392,8 +404,9 @@ but it can not be combined with the field indexing approach.
 #### Configuration
 
 ```
-gsrs.scheduled-tasks.list+= {
+gsrs.scheduled-tasks.list.ScheduledExportTask = {
     "scheduledTaskClass" : "gsrs.module.substance.tasks.ScheduledExportTask",
+    "order": 2100,
     "parameters" : {
         "cron": "0 10 1 * * ?",
         "autorun": false,
@@ -464,8 +477,9 @@ The custom strings format support must be implemented in the toFormat method of 
 #### Configuration
 
 ```
-gsrs.scheduled-tasks.list+= {
+gsrs.scheduled-tasks.list.ScheduledSQLExportTask = {
     "scheduledTaskClass" : "gsrs.module.substance.tasks.ScheduledSQLExportTask",
+    "order": 2200,
     "parameters" : {
         "cron":"0 0 0 * * ?",
         "autorun":false,
@@ -524,10 +538,11 @@ The JmespathValidator can to be used for creating the custom GSRS validations ru
 #### Configuration
 
 ```
-gsrs.validators.substances += {
+gsrs.validators.substances.list.JmespathValidator = {
     "validatorClass" = "ix.ginas.utils.validation.validators.JmespathValidator",
     "newObjClass" = "ix.ginas.models.v1.Substance",
     "configClass" = "SubstanceValidatorConfig",
+    "order": 4000,
     "parameters"= {
         "expressions" = [
             {"messageType": "ERROR", "messageTemplate": "Only single %s Code allowed.", "expression": "new.codes[?type=='PRIMARY' && codeSystem=='MyCodeSystem'].codeSystem | [1]"},
