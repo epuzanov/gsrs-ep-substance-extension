@@ -401,7 +401,7 @@ public class SQLExporter implements Exporter<Substance> {
         if (compressorName != null) {
             try (
                 InputStream is = new FileInputStream(exportFile);
-                CompressorOutputStream<? extends OutputStream> cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, this.out);
+                CompressorOutputStream cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, this.out);
             ) {
                 while (( len = is.read(buffer)) > 0) {
                     cos.write(buffer, 0, len);

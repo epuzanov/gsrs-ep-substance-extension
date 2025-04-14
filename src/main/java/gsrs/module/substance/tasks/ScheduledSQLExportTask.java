@@ -367,7 +367,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         }
 
         FileObject comprFile = manager.resolveFile("tmp:///export.comprTmp");
-        try (CompressorOutputStream<? extends OutputStream> cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, comprFile.getContent().getOutputStream())) {
+        try (CompressorOutputStream cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, comprFile.getContent().getOutputStream())) {
             InputStream is = arcFile.getContent().getInputStream();
             while (( len = is.read(buffer)) > 0) {
                 cos.write(buffer, 0, len);
