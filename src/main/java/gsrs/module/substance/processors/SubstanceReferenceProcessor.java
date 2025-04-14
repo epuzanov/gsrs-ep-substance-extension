@@ -126,38 +126,8 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
     }
 
     @Override
-    public void postPersist(SubstanceReference obj) throws EntityProcessor.FailProcessingException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void preRemove(SubstanceReference obj) throws EntityProcessor.FailProcessingException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void postRemove(SubstanceReference obj) throws EntityProcessor.FailProcessingException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
     public void preUpdate(SubstanceReference obj) throws EntityProcessor.FailProcessingException {
         prePersist(obj);
-    }
-
-    @Override
-    public void postUpdate(SubstanceReference obj) throws EntityProcessor.FailProcessingException {
-        // TODO Auto-generated method stub
-
-    }
-
-    @Override
-    public void postLoad(SubstanceReference obj) throws ix.core.EntityProcessor.FailProcessingException {
-        // TODO Auto-generated method stub
-
     }
 
     @Override

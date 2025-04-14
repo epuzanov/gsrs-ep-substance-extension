@@ -31,9 +31,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.sql.DataSource;
 
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -106,7 +106,6 @@ public class SQLExporter implements Exporter<Substance> {
         }
     }
 
-    @Data
     public static class EntryConfig {
         private final String name;
         private final String sql;
@@ -128,6 +127,22 @@ public class SQLExporter implements Exporter<Substance> {
                 .setNullString((String) m.getOrDefault("nullString", format.getNullString()))
                 .setRecordSeparator((String) m.getOrDefault("recordSeparator", format.getRecordSeparator()))
                 .get();
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        public String getSql() {
+            return this.sql;
+        }
+
+        public Charset getEncoding() {
+            return this.encoding;
+        }
+
+        public CSVFormat getFormat() {
+            return this.format;
         }
     }
 
@@ -349,7 +364,10 @@ public class SQLExporter implements Exporter<Substance> {
                 workbook.write(this.out);
             } catch (Exception e) {
                 log.error("Exception:", e);
+            } finally {
+                workbook.close();
             }
+
             exportFile = null;
             archiverName = null;
         }
@@ -358,7 +376,7 @@ public class SQLExporter implements Exporter<Substance> {
             exportFile = new File(tmpdir, "export.arcTmp");
             try (
                 OutputStream fos = new FileOutputStream(exportFile);
-                ArchiveOutputStream aos = new ArchiveStreamFactory().createArchiveOutputStream(archiverName, fos);
+                ArchiveOutputStream<ArchiveEntry> aos = new ArchiveStreamFactory().createArchiveOutputStream(archiverName, fos);
             ) {
                 for (EntryConfig entry : files) {
                     File file = new File(tmpdir, entry.getName());
@@ -383,14 +401,16 @@ public class SQLExporter implements Exporter<Substance> {
         if (compressorName != null) {
             try (
                 InputStream is = new FileInputStream(exportFile);
-                CompressorOutputStream cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, this.out);
+                CompressorOutputStream<? extends OutputStream> cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, this.out);
             ) {
                 while (( len = is.read(buffer)) > 0) {
                     cos.write(buffer, 0, len);
                 }
             }
-            exportFile.delete();
-            exportFile = null;
+            if (exportFile != null) {
+                exportFile.delete();
+                exportFile = null;
+            }
         }
 
         if (exportFile != null) {

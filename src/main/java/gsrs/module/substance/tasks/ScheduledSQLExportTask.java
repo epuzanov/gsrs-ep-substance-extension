@@ -29,8 +29,9 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import javax.sql.DataSource;
 
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+
+import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -62,17 +63,15 @@ import org.apache.commons.vfs2.util.DelegatingFileSystemOptionsBuilder;
  */
 
 @Slf4j
-@Data
 public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
 
-    private String name = "substances";
+    private String description;
     private StringConverter stringConverter = new DefaultStringConverter();
     private List<EntryConfig> files = new ArrayList<EntryConfig>();
     private List<DestinationConfig> destinations = new ArrayList<DestinationConfig>();
     @JsonIgnore
     private Lock lock = new ReentrantLock();
 
-    @Data
     private class EntryConfig {
         private final String name;
         private final String msg;
@@ -95,11 +94,30 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
                                     .setEscape(m.getOrDefault("escapeChar", "").toString().isEmpty() ? null : Character.valueOf(m.get("escapeChar").toString().charAt(0)))
                                     .setNullString(m.getOrDefault("nullString", "").toString())
                                     .setRecordSeparator(m.getOrDefault("recordSeparator", "\r\n").toString())
-                                    .build();
+                                    .get();
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        public String getMsg() {
+            return this.msg;
+        }
+
+        public String getSql() {
+            return this.sql;
+        }
+
+        public String getEncoding() {
+            return this.encoding;
+        }
+
+        public CSVFormat getFormat() {
+            return this.format;
         }
     }
 
-    @Data
     private class DestinationConfig {
         private final URI uri;
         private final FileSystemOptions options;
@@ -132,9 +150,22 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
             this.options = opts;
         }
 
+        public URI getUri() {
+            return this.uri;
+        }
+
+        public FileSystemOptions getOptions() {
+            return this.options;
+        }
+
         public FileObject getFileObject(FileSystemManager manager) throws FileSystemException {
             return manager.resolveFile(uri.toString(), options);
         }
+    }
+
+    @JsonProperty(value="parameters")
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @JsonProperty(value="files")
@@ -316,7 +347,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         }
 
         FileObject arcFile = manager.resolveFile("tmp:///export.arcTmp");
-        try (ArchiveOutputStream aos = new ArchiveStreamFactory().createArchiveOutputStream(archiverName, arcFile.getContent().getOutputStream())) {
+        try (ArchiveOutputStream<ArchiveEntry> aos = new ArchiveStreamFactory().createArchiveOutputStream(archiverName, arcFile.getContent().getOutputStream())) {
             for (FileObject entryFile : tmpFs.findFiles(new FileTypeSelector(FileType.FILE))) {
                 aos.putArchiveEntry(
                     aos.createArchiveEntry(
@@ -336,7 +367,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
         }
 
         FileObject comprFile = manager.resolveFile("tmp:///export.comprTmp");
-        try (CompressorOutputStream cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, comprFile.getContent().getOutputStream())) {
+        try (CompressorOutputStream<? extends OutputStream> cos = new CompressorStreamFactory().createCompressorOutputStream(compressorName, comprFile.getContent().getOutputStream())) {
             InputStream is = arcFile.getContent().getInputStream();
             while (( len = is.read(buffer)) > 0) {
                 cos.write(buffer, 0, len);
@@ -413,7 +444,7 @@ public class ScheduledSQLExportTask extends ScheduledTaskInitializer {
 
     @Override
     public String getDescription() {
-        return "Full SQL Export to " + name;
+        return this.description;
     }
 }
 

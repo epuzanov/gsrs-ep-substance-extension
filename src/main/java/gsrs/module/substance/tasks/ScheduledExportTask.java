@@ -61,7 +61,6 @@ import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import org.apache.commons.csv.CSVFormat;
@@ -143,6 +142,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
     protected PlatformTransactionManager transactionManager;
 
 
+    @JsonProperty(value="description")
     public void setDescription(String description) {
         this.description = description;
     }
@@ -151,6 +151,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         return extension;
     }
 
+    @JsonProperty(value="extension")
     public void setExtension(String extension) {
         this.extension = extension;
     }
@@ -159,6 +160,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         return filenameTemplate;
     }
 
+    @JsonProperty(value="filenameTemplate")
     public void setFilenameTemplate(String filenameTemplate) {
         this.filenameTemplate = filenameTemplate;
     }
@@ -167,6 +169,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         return parameters;
     }
 
+    @JsonProperty(value="parameters")
     public void setParameters(Map<String, String> parameters) {
         this.parameters = parameters;
     }
@@ -175,6 +178,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         return preserveExports;
     }
 
+    @JsonProperty(value="preserveExports")
     public void setPreserveExports(boolean preserveExports) {
         this.preserveExports = preserveExports;
     }
@@ -183,6 +187,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         return publicOnly;
     }
 
+    @JsonProperty(value="publicOnly")
     public void setPublicOnly(boolean publicOnly) {
         this.publicOnly = publicOnly;
     }
@@ -191,6 +196,7 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         return query;
     }
 
+    @JsonProperty(value="query")
     public void setQuery(String query) {
         this.query = query;
     }
@@ -199,8 +205,16 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         return username;
     }
 
+    @JsonProperty(value="username")
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    @JsonProperty(value="destinations")
+    public void setDestinations(Map<String, Map<String, String>> m) throws FileSystemException, NoSuchMethodException, URISyntaxException {
+        for (Map<String, String> value : m.values()) {
+            destinations.add(new DestinationConfig(value));
+        }
     }
 
     protected static class SmtpFileSystemConfigBuilder extends FileSystemConfigBuilder {
@@ -626,7 +640,6 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
         }
     }
 
-    @Data
     private class DestinationConfig {
         private final URI uri;
         private final FileSystemOptions options;
@@ -660,15 +673,16 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
             this.options = opts;
         }
 
+        public URI getUri() {
+            return this.uri;
+        }
+
+        public FileSystemOptions getOptions() {
+            return this.options;
+        }
+
         public FileObject getFileObject(FileSystemManager manager) throws FileSystemException {
             return manager.resolveFile(uri.toString(), options);
-        }
-    }
-
-    @JsonProperty(value="destinations")
-    public void setDestinations(Map<String, Map<String, String>> m) throws FileSystemException, NoSuchMethodException, URISyntaxException {
-        for (Map<String, String> value : m.values()) {
-            destinations.add(new DestinationConfig(value));
         }
     }
 
@@ -774,7 +788,6 @@ public class ScheduledExportTask extends ScheduledTaskInitializer {
 
         log.trace("factory: " + factory);
         if (factory == null) {
-            // TODO handle null couldn't find factory for params
             throw new IllegalArgumentException("could not find suitable factory for " + params);
         }
         return factory.createNewExporter(pos, params);
