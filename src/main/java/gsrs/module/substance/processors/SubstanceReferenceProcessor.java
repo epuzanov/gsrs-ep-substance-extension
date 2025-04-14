@@ -49,14 +49,16 @@ public class SubstanceReferenceProcessor implements EntityProcessor<SubstanceRef
         }
     }
 
-
     public SubstanceReferenceProcessor() {
         this(new HashMap<String, Object>());
     }
 
     public SubstanceReferenceProcessor(Map<String, Object> m) {
-        ObjectMapper mapper = new ObjectMapper();
-        config = mapper.convertValue(m, SubstanceReferenceProcessorConfig.class);
+        setConfig(m);
+    }
+
+    public void setConfig(Map<String, Object> m) {
+        this.config = new ObjectMapper().convertValue(m, SubstanceReferenceProcessorConfig.class);
     }
 
     @Override
