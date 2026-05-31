@@ -12,6 +12,32 @@ Simply run:
 
 ## Modules
 
+### gsrs.module.substance.exporters.XslExporterFactory
+The XslExporter can be used for the exporting of the substances using XSL template.
+
+#### Dependencies
+* net.sf.saxon.Saxon-HE
+
+#### Configuration
+
+```
+ix.ginas.export.exporterfactories.substances.list.EmaSmsFhir = {
+    "exporterFactoryClass": "gsrs.module.substance.exporters.XslExporterFactory",
+    "order": 2000,
+    "parameters": {
+        "format": {
+            "extension": "ema.hfir.json.gz",
+            "displayName": "EMA SMS FHIR JSON File"
+        },
+        "templateFile": "ema-fhir.xsl",
+        "header": "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\": [{\"resource\":",
+        "footer": "]}",
+        "delimiter": "},{\"resource\":",
+        "shouldCompress": true
+    }
+}
+```
+
 ### gsrs.module.substance.processors.DBClassificationsCodeProcessor
 The DBClassificationsCodeProcessor can be used for creating the comment string for classification codes using SQL database as the source. The query must return 4 fields.
 The first field contains COMMENTS text, the second field contains URL, the third field contains DOC_TYPE of the Reference and the fourth field contains CITATION of the Reference.
