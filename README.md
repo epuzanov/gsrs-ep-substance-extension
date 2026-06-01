@@ -29,10 +29,26 @@ ix.ginas.export.exporterfactories.substances.list.EmaSmsFhir = {
             "extension": "ema.hfir.json.gz",
             "displayName": "EMA SMS FHIR JSON File"
         },
-        "templateFile": "ema-fhir.xsl",
+        "templateFile": "ema-fhir-json.xsl",
         "header": "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\": [{\"resource\":",
         "footer": "]}",
         "delimiter": "},{\"resource\":",
+        "shouldCompress": true
+    }
+}
+
+ix.ginas.export.exporterfactories.substances.list.Gsrsp = {
+    "exporterFactoryClass": "gsrs.module.substance.exporters.XslExporterFactory",
+    "order": 2100,
+    "parameters": {
+        "format": {
+            "extension": "gsrsp",
+            "displayName": "GSRS portable, gzipped JSON (.gsrs)"
+        },
+        "templateFile": "gsrsp.xsl",
+        "header": "\t\t",
+        "footer": "",
+        "delimiter": "\n\t\t",
         "shouldCompress": true
     }
 }
