@@ -33,10 +33,8 @@
         <xsl:variable name="approvalID" select="string($root/fn:string[@key='approvalID'])"/>
         <xsl:variable name="approvedBy" select="string($root/fn:string[@key='approvedBy'])"/>
         <xsl:variable name="deprecated" select="string($root/fn:boolean[@key='deprecated'])"/>
-        <xsl:variable name="created-epoch" select="string($root/fn:number[@key='created'])"/>
-        <xsl:variable name="lastEdited-epoch" select="string($root/fn:number[@key='lastEdited'])"/>
-        <xsl:variable name="created" select="local:epoch-to-iso($created-epoch)"/>
-        <xsl:variable name="lastEdited" select="local:epoch-to-iso($lastEdited-epoch)"/>
+        <xsl:variable name="created" select="local:epoch-to-iso(string($root/fn:number[@key='created']))"/>
+        <xsl:variable name="lastEdited" select="local:epoch-to-iso(string($root/fn:number[@key='lastEdited']))"/>
 
         <xsl:variable name="transformed-xml">
             <fn:map xmlns:fn="http://www.w3.org/2005/xpath-functions">
@@ -68,6 +66,41 @@
                             </fn:array>
                         </xsl:if>
                     </fn:map>
+                    <xsl:if test="$root/fn:array[@key='references']/fn:map">
+                        <xsl:for-each select="$root/fn:array[@key='references']/fn:map">
+                            <fn:map>
+                                <fn:string key="resourceType">DocumentReference</fn:string>
+                                <fn:string key="id"><xsl:value-of select="fn:string[@key='uuid']/text()"/></fn:string>
+                                <fn:string key="status">current</fn:string>
+                                <xsl:if test="fn:string[@key='docType']/text()">
+                                    <fn:map key="type">
+                                        <fn:array key="coding">
+                                            <fn:map>
+                                                <fn:string key="code"><xsl:value-of select="fn:string[@key='docType']/text()"/></fn:string>
+                                            </fn:map>
+                                        </fn:array>
+                                    </fn:map>
+                                </xsl:if>
+                                <xsl:if test="fn:string[@key='citation']/text()">
+                                    <fn:string key="description"><xsl:value-of select="fn:string[@key='citation']/text()"/></fn:string>
+                                </xsl:if>
+                                <xsl:if test="fn:string[@key='citation']/text() or fn:string[@key='url']/text()">
+                                    <fn:array key="content">
+                                        <fn:map>
+                                            <fn:map key="attachment">
+                                                <xsl:if test="fn:string[@key='citation']/text()">
+                                                    <fn:string key="title"><xsl:value-of select="fn:string[@key='citation']/text()"/></fn:string>
+                                                </xsl:if>
+                                                <xsl:if test="fn:string[@key='url']/text()">
+                                                    <fn:string key="url"><xsl:value-of select="fn:string[@key='url']/text()"/></fn:string>
+                                                </xsl:if>
+                                            </fn:map>
+                                        </fn:map>
+                                    </fn:array>
+                                </xsl:if>
+                            </fn:map>
+                        </xsl:for-each>
+                    </xsl:if>
                     <xsl:if test="$root/fn:map[@key='protein']">
                         <fn:map>
                             <fn:string key="resourceType">SubstanceProtein</fn:string>
@@ -167,6 +200,94 @@
                             </xsl:if>
                         </fn:map>
                     </xsl:if>
+                    <xsl:if test="$root/fn:map[@key='polymer']">
+                        <fn:map>
+                            <fn:string key="resourceType">SubstancePolymer</fn:string>
+                            <fn:string key="id"><xsl:value-of select="$root/fn:map[@key='polymer']/fn:string[@key='uuid']/text()"/></fn:string>
+                            <xsl:variable name="poly" select="$root/fn:map[@key='polymer']"/>
+                            <xsl:variable name="poly-cls" select="$poly/fn:map[@key='classification']"/>
+                            <xsl:if test="$poly-cls/fn:string[@key='polymerClass']/text()">
+                                <fn:map key="class">
+                                    <fn:array key="coding">
+                                        <fn:map>
+                                            <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'POLYMER_CLASS')"/></fn:string>
+                                            <fn:string key="code"><xsl:value-of select="$poly-cls/fn:string[@key='polymerClass']/text()"/></fn:string>
+                                        </fn:map>
+                                    </fn:array>
+                                </fn:map>
+                            </xsl:if>
+                            <xsl:if test="$poly-cls/fn:string[@key='polymerGeometry']/text()">
+                                <fn:map key="geometry">
+                                    <fn:array key="coding">
+                                        <fn:map>
+                                            <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'POLYMER_GEOMETRY')"/></fn:string>
+                                            <fn:string key="code"><xsl:value-of select="$poly-cls/fn:string[@key='polymerGeometry']/text()"/></fn:string>
+                                        </fn:map>
+                                    </fn:array>
+                                </fn:map>
+                            </xsl:if>
+                            <xsl:if test="$poly-cls/fn:array[@key='polymerSubclass']/fn:string">
+                                <fn:array key="copolymerConnectivity">
+                                    <xsl:for-each select="$poly-cls/fn:array[@key='polymerSubclass']/fn:string/text()">
+                                        <fn:map>
+                                            <fn:array key="coding">
+                                                <fn:map>
+                                                    <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'POLYMER_SUBCLASS')"/></fn:string>
+                                                    <fn:string key="code"><xsl:value-of select="."/></fn:string>
+                                                </fn:map>
+                                            </fn:array>
+                                        </fn:map>
+                                    </xsl:for-each>
+                                </fn:array>
+                            </xsl:if>
+                            <xsl:if test="$poly/fn:array[@key='monomers']/fn:map">
+                                <fn:array key="monomerSet">
+                                    <xsl:for-each select="$poly/fn:array[@key='monomers']/fn:map">
+                                        <fn:map>
+                                            <xsl:variable name="amount" select="fn:map[@key='amount']"/>
+                                            <xsl:if test="$amount/fn:string[@key='type']/text()">
+                                                <fn:map key="ratioType">
+                                                    <fn:array key="coding">
+                                                        <fn:map>
+                                                            <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'MONOMER_AMOUNT_TYPE')"/></fn:string>
+                                                            <fn:string key="code"><xsl:value-of select="$amount/fn:string[@key='type']/text()"/></fn:string>
+                                                        </fn:map>
+                                                    </fn:array>
+                                                </fn:map>
+                                            </xsl:if>
+                                            <fn:array key="startingMaterial">
+                                                <fn:map>
+                                                    <xsl:if test="fn:map[@key='monomerSubstance']/fn:string[@key='approvalID']/text()">
+                                                        <fn:map key="code">
+                                                            <fn:array key="coding">
+                                                                <fn:map>
+                                                                    <fn:string key="system">https://gsrs.ncats.nih.gov/api/v1/approvalIDs</fn:string>
+                                                                    <fn:string key="code"><xsl:value-of select="fn:map[@key='monomerSubstance']/fn:string[@key='approvalID']/text()"/></fn:string>
+                                                                </fn:map>
+                                                            </fn:array>
+                                                        </fn:map>
+                                                    </xsl:if>
+                                                    <xsl:if test="fn:boolean[@key='defining']/text()">
+                                                        <fn:boolean key="isDefining"><xsl:value-of select="fn:boolean[@key='defining']/text()"/></fn:boolean>
+                                                    </xsl:if>
+                                                    <xsl:if test="$amount/fn:number[@key='average']/text() or $amount/fn:string[@key='units']/text()">
+                                                        <fn:map key="amount">
+                                                            <xsl:if test="$amount/fn:number[@key='average']/text()">
+                                                                <fn:number key="value"><xsl:value-of select="$amount/fn:number[@key='average']/text()"/></fn:number>
+                                                            </xsl:if>
+                                                            <xsl:if test="$amount/fn:string[@key='units']/text()">
+                                                                <fn:string key="unit"><xsl:value-of select="$amount/fn:string[@key='units']/text()"/></fn:string>
+                                                            </xsl:if>
+                                                        </fn:map>
+                                                    </xsl:if>
+                                                </fn:map>
+                                            </fn:array>
+                                        </fn:map>
+                                    </xsl:for-each>
+                                </fn:array>
+                            </xsl:if>
+                        </fn:map>
+                    </xsl:if>
                 </fn:array>
 
                 <xsl:if test="$root/fn:map[@key='protein']">
@@ -181,10 +302,60 @@
                     </fn:map>
                 </xsl:if>
 
+                <xsl:if test="$root/fn:map[@key='polymer']">
+                    <fn:map key="polymer">
+                        <fn:string key="reference"><xsl:value-of select="concat('#', $root/fn:map[@key='polymer']/fn:string[@key='uuid']/text())"/></fn:string>
+                    </fn:map>
+                </xsl:if>
+
+                <xsl:if test="$root/fn:map[@key='structurallyDiverse']">
+                    <xsl:variable name="sd" select="$root/fn:map[@key='structurallyDiverse']"/>
+                    <fn:map key="sourceMaterial">
+                        <xsl:if test="$sd/fn:string[@key='sourceMaterialClass']/text() or $sd/fn:string[@key='sourceMaterialType']/text()">
+                            <fn:map key="type">
+                                <fn:array key="coding">
+                                    <xsl:if test="$sd/fn:string[@key='sourceMaterialClass']/text()">
+                                        <fn:map>
+                                            <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'SOURCE_MATERIAL_CLASS')"/></fn:string>
+                                            <fn:string key="code"><xsl:value-of select="$sd/fn:string[@key='sourceMaterialClass']/text()"/></fn:string>
+                                        </fn:map>
+                                    </xsl:if>
+                                    <xsl:if test="$sd/fn:string[@key='sourceMaterialType']/text()">
+                                        <fn:map>
+                                            <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'SOURCE_MATERIAL_TYPE')"/></fn:string>
+                                            <fn:string key="code"><xsl:value-of select="$sd/fn:string[@key='sourceMaterialType']/text()"/></fn:string>
+                                        </fn:map>
+                                    </xsl:if>
+                                </fn:array>
+                            </fn:map>
+                        </xsl:if>
+                        <xsl:if test="$sd/fn:string[@key='organismGenus']/text()">
+                            <fn:map key="genus">
+                                <fn:string key="text"><xsl:value-of select="$sd/fn:string[@key='organismGenus']/text()"/></fn:string>
+                            </fn:map>
+                        </xsl:if>
+                        <xsl:if test="$sd/fn:string[@key='organismSpecies']/text()">
+                            <fn:map key="species">
+                                <fn:string key="text"><xsl:value-of select="$sd/fn:string[@key='organismSpecies']/text()"/></fn:string>
+                            </fn:map>
+                        </xsl:if>
+                        <xsl:if test="$sd/fn:array[@key='part']/fn:string/text()">
+                            <fn:map key="part">
+                                <fn:array key="coding">
+                                    <fn:map>
+                                        <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'PART')"/></fn:string>
+                                        <fn:string key="code"><xsl:value-of select="$sd/fn:array[@key='part']/fn:string/text()"/></fn:string>
+                                    </fn:map>
+                                </fn:array>
+                            </fn:map>
+                        </xsl:if>
+                    </fn:map>
+                </xsl:if>
+
                 <xsl:if test="$approvalID">
                     <fn:array key="identifier">
                         <fn:map>
-                            <fn:string key="system">https://gsrs.ncats.nih.gov/api/v1/approvalIDs</fn:string>
+                            <fn:string key="system">https://gsrs.ncats.nih.gov/api/v1/approvalID</fn:string>
                             <fn:string key="value"><xsl:value-of select="$approvalID"/></fn:string>
                         </fn:map>
                     </fn:array>
@@ -349,6 +520,15 @@
                                     </xsl:for-each>
                                 </fn:array>
                             </xsl:if>
+                            <xsl:if test="fn:array[@key='references']/fn:string">
+                                <fn:array key="source">
+                                    <xsl:for-each select="fn:array[@key='references']/fn:string/text()">
+                                        <fn:map>
+                                            <fn:string key="reference"><xsl:value-of select="concat('#', .)"/></fn:string>
+                                        </fn:map>
+                                    </xsl:for-each>
+                                </fn:array>
+                            </xsl:if>
                         </fn:map>
                     </xsl:for-each>
                 </fn:array>
@@ -375,12 +555,21 @@
                                         </fn:map>
                                     </fn:array>
                                 </xsl:if>
+                                <xsl:if test="fn:array[@key='references']/fn:string">
+                                    <fn:array key="source">
+                                        <xsl:for-each select="fn:array[@key='references']/fn:string/text()">
+                                            <fn:map>
+                                                <fn:string key="reference"><xsl:value-of select="concat('#', .)"/></fn:string>
+                                            </fn:map>
+                                        </xsl:for-each>
+                                    </fn:array>
+                                </xsl:if>
                             </fn:map>
                         </xsl:for-each>
                     </fn:array>
                 </xsl:if>
 
-                <xsl:if test="$root/fn:array[@key='relationships']/fn:map">
+                <xsl:if test="$root/fn:array[@key='relationships']/fn:map or $root/fn:map[@key='mixture']/fn:array[@key='components']/fn:map or $root/fn:map[@key='specifiedSubstance']/fn:array[@key='constituents']/fn:map">
                     <fn:array key="relationship">
                         <xsl:for-each select="$root/fn:array[@key='relationships']/fn:map">
                             <fn:map>
@@ -397,6 +586,55 @@
                                         <fn:map>
                                             <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'RELATIONSHIP_TYPE')"/></fn:string>
                                             <fn:string key="code"><xsl:value-of select="fn:string[@key='type']/text()"/></fn:string>
+                                        </fn:map>
+                                    </fn:array>
+                                </fn:map>
+                                <xsl:if test="fn:array[@key='references']/fn:string">
+                                    <fn:array key="source">
+                                        <xsl:for-each select="fn:array[@key='references']/fn:string/text()">
+                                            <fn:map>
+                                                <fn:string key="reference"><xsl:value-of select="concat('#', .)"/></fn:string>
+                                            </fn:map>
+                                        </xsl:for-each>
+                                    </fn:array>
+                                </xsl:if>
+                            </fn:map>
+                        </xsl:for-each>
+                        <xsl:for-each select="$root/fn:map[@key='mixture']/fn:array[@key='components']/fn:map">
+                            <fn:map>
+                                <xsl:if test="fn:string[@key='uuid']">
+                                    <fn:string key="id"><xsl:value-of select="fn:string[@key='uuid']/text()"/></fn:string>
+                                </xsl:if>
+                                <fn:map key="substanceDefinitionReference">
+                                    <fn:string key="reference">
+                                        <xsl:value-of select="concat('SubstanceDefinition/', fn:map[@key='substance']/fn:string[@key='refuuid']/text())"/>
+                                    </fn:string>
+                                </fn:map>
+                                <fn:map key="type">
+                                    <fn:array key="coding">
+                                        <fn:map>
+                                            <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'RELATIONSHIP_TYPE')"/></fn:string>
+                                            <fn:string key="code"><xsl:value-of select="concat('MIXTURE_COMPONENT_', fn:string[@key='type']/text())"/></fn:string>
+                                        </fn:map>
+                                    </fn:array>
+                                </fn:map>
+                            </fn:map>
+                        </xsl:for-each>
+                        <xsl:for-each select="$root/fn:map[@key='specifiedSubstance']/fn:array[@key='constituents']/fn:map">
+                            <fn:map>
+                                <xsl:if test="fn:string[@key='uuid']">
+                                    <fn:string key="id"><xsl:value-of select="fn:string[@key='uuid']/text()"/></fn:string>
+                                </xsl:if>
+                                <fn:map key="substanceDefinitionReference">
+                                    <fn:string key="reference">
+                                        <xsl:value-of select="concat('SubstanceDefinition/', fn:map[@key='substance']/fn:string[@key='refuuid']/text())"/>
+                                    </fn:string>
+                                </fn:map>
+                                <fn:map key="type">
+                                    <fn:array key="coding">
+                                        <fn:map>
+                                            <fn:string key="system"><xsl:value-of select="concat($cv-base-url, 'RELATIONSHIP_TYPE')"/></fn:string>
+                                            <fn:string key="code"><xsl:value-of select="concat('SSG1_CONSTITUENT_', fn:string[@key='role']/text())"/></fn:string>
                                         </fn:map>
                                     </fn:array>
                                 </fn:map>
@@ -565,6 +803,15 @@
                                     </fn:map>
                                 </fn:array>
                             </fn:map>
+                        </xsl:if>
+                        <xsl:if test="$s/fn:array[@key='references']/fn:string">
+                            <fn:array key="sourceDocument">
+                                <xsl:for-each select="$s/fn:array[@key='references']/fn:string/text()">
+                                    <fn:map>
+                                        <fn:string key="reference"><xsl:value-of select="concat('#', .)"/></fn:string>
+                                    </fn:map>
+                                </xsl:for-each>
+                            </fn:array>
                         </xsl:if>
                     </fn:map>
                 </xsl:if>

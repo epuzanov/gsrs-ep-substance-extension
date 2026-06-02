@@ -3,7 +3,8 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:xs="http://www.w3.org/2001/XMLSchema"
                 xmlns:fn="http://www.w3.org/2005/xpath-functions"
-                exclude-result-prefixes="fn xs">
+                xmlns:local="urn:local"
+                exclude-result-prefixes="fn xs local">
 
     <xsl:output method="json" encoding="UTF-8"/>
 
@@ -11,6 +12,14 @@
     
     <!-- Current timestamp in ISO format for lastUpdated -->
     <xsl:variable name="current-timestamp" select="'2024-10-08T13:37:23.468+00:00'"/>
+
+    <xsl:function name="local:epoch-to-iso" as="xs:string">
+        <xsl:param name="epoch-ms" as="xs:string"/>
+        <xsl:sequence select="fn:format-dateTime(
+            xs:dateTime('1970-01-01T00:00:00Z')
+                + xs:dayTimeDuration(concat('PT', xs:string(xs:integer(number($epoch-ms) div 1000)), 'S')),
+            '[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
+    </xsl:function>
 
     <xsl:template match="/">
         <!-- Parse the JSON input string -->
@@ -21,13 +30,11 @@
         <xsl:variable name="version" select="$json-doc/fn:map/fn:string[@key='version']/text()"/>
         <xsl:variable name="status" select="$json-doc/fn:map/fn:string[@key='status']/text()"/>
         <xsl:variable name="changeReason" select="$json-doc/fn:map/fn:string[@key='changeReason']/text()"/>
-        <xsl:variable name="created-epoch" select="$json-doc/fn:map/fn:number[@key='created']/text()"/>
-        <xsl:variable name="lastEdited-epoch" select="$json-doc/fn:map/fn:number[@key='lastEdited']/text()"/>
-        <xsl:variable name="created" select="fn:format-dateTime(xs:dateTime('1970-01-01T00:00:00Z') + xs:dayTimeDuration(concat('PT', xs:string(xs:integer($created-epoch div 1000)), 'S')), '[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
-        <xsl:variable name="lastEdited" select="fn:format-dateTime(xs:dateTime('1970-01-01T00:00:00Z') + xs:dayTimeDuration(concat('PT', xs:string(xs:integer($lastEdited-epoch div 1000)), 'S')), '[Y0001]-[M01]-[D01]T[H01]:[m01]:[s01]Z')"/>
         <xsl:variable name="approvedBy" select="$json-doc/fn:map/fn:string[@key='approvedBy']/text()"/>
         <xsl:variable name="smsid" select="$json-doc/fn:map/fn:array[@key='codes']/fn:map[fn:string[@key='codeSystem'] = 'SMS_ID']/fn:string[@key='code']/text()"/>
         <xsl:variable name="substanceClass" select="$json-doc/fn:map/fn:string[@key='substanceClass']/text()"/>
+        <xsl:variable name="created" select="local:epoch-to-iso(string($root/fn:number[@key='created']))"/>
+        <xsl:variable name="lastEdited" select="local:epoch-to-iso(string($root/fn:number[@key='lastEdited']))"/>
 
         <!-- Transform the GSRS substance to FHIR SubstanceDefinition -->
         <xsl:variable name="transformed-xml">

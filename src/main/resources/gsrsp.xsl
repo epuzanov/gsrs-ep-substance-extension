@@ -5,7 +5,7 @@
                 xmlns:fn="http://www.w3.org/2005/xpath-functions"
                 exclude-result-prefixes="fn xs">
 
-    <xsl:output method="text" encoding="UTF-8"/>
+    <xsl:output method="json" encoding="UTF-8"/>
     <xsl:param name="json-input" as="xs:string" required="yes"/>
 
     <xsl:template match="/">
