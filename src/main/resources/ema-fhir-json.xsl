@@ -26,13 +26,14 @@
         <xsl:variable name="json-doc" select="fn:json-to-xml($json-input)"/>
         
         <!-- Extract key values from source -->
-        <xsl:variable name="uuid" select="$json-doc/fn:map/fn:string[@key='uuid']/text()"/>
-        <xsl:variable name="version" select="$json-doc/fn:map/fn:string[@key='version']/text()"/>
-        <xsl:variable name="status" select="$json-doc/fn:map/fn:string[@key='status']/text()"/>
-        <xsl:variable name="changeReason" select="$json-doc/fn:map/fn:string[@key='changeReason']/text()"/>
-        <xsl:variable name="approvedBy" select="$json-doc/fn:map/fn:string[@key='approvedBy']/text()"/>
-        <xsl:variable name="smsid" select="$json-doc/fn:map/fn:array[@key='codes']/fn:map[fn:string[@key='codeSystem'] = 'SMS_ID']/fn:string[@key='code']/text()"/>
-        <xsl:variable name="substanceClass" select="$json-doc/fn:map/fn:string[@key='substanceClass']/text()"/>
+        <xsl:variable name="root" select="$json-doc/fn:map"/>
+        <xsl:variable name="uuid" select="string($root/fn:string[@key='uuid'])"/>
+        <xsl:variable name="version" select="string($root/fn:string[@key='version'])"/>
+        <xsl:variable name="status" select="string($root/fn:string[@key='status'])"/>
+        <xsl:variable name="changeReason" select="string($root/fn:string[@key='changeReason'])"/>
+        <xsl:variable name="approvedBy" select="string($root/fn:string[@key='approvedBy'])"/>
+        <xsl:variable name="smsid" select="string($root/fn:array[@key='codes']/fn:map[fn:string[@key='codeSystem'] = 'SMS_ID']/fn:string[@key='code'])"/>
+        <xsl:variable name="substanceClass" select="string($root/fn:string[@key='substanceClass'])"/>
         <xsl:variable name="created" select="local:epoch-to-iso(string($root/fn:number[@key='created']))"/>
         <xsl:variable name="lastEdited" select="local:epoch-to-iso(string($root/fn:number[@key='lastEdited']))"/>
 
@@ -111,7 +112,7 @@
                         </fn:map>
                     </fn:map>
                     <xsl:call-template name="access">
-                        <xsl:with-param name="access-field" select="$json-doc/fn:map/fn:array[@key='access']"/>
+                        <xsl:with-param name="access-field" select="$root/fn:array[@key='access']"/>
                     </xsl:call-template>
                 </fn:array>
                 
@@ -131,7 +132,7 @@
                 <!-- Status -->
                 <fn:map key="status">
                     <xsl:call-template name="status">
-                        <xsl:with-param name="deprecated-field" select="$json-doc/fn:map/fn:boolean[@key='deprecated']"/>
+                        <xsl:with-param name="deprecated-field" select="$root/fn:boolean[@key='deprecated']"/>
                     </xsl:call-template>
                 </fn:map>
                 
@@ -157,7 +158,7 @@
                 
                 <!-- Names -->
                 <fn:array key="name">
-                    <xsl:for-each select="$json-doc/fn:map/fn:array[@key='names']/fn:map">
+                    <xsl:for-each select="$root/fn:array[@key='names']/fn:map">
                         <xsl:variable name="name-value" select="fn:string[@key='name']/text()"/>
                         <xsl:variable name="type" select="fn:string[@key='type']/text()"/>
                         <xsl:variable name="preferred" select="fn:boolean[@key='displayName']/text()"/>
@@ -192,13 +193,13 @@
                 
                 <!-- Structure information -->
                 <xsl:call-template name="structure">
-                    <xsl:with-param name="structure-node" select="$json-doc/fn:map/fn:map[@key='structure']"/>
+                    <xsl:with-param name="structure-node" select="$root/fn:map[@key='structure']"/>
                 </xsl:call-template>
                 
                 <!-- Codes -->
-                <xsl:if test="$json-doc/fn:map/fn:array[@key='codes']">
+                <xsl:if test="$root/fn:array[@key='codes']">
                     <fn:array key="code">
-                        <xsl:for-each select="$json-doc/fn:map/fn:array[@key='codes']/fn:map">
+                        <xsl:for-each select="$root/fn:array[@key='codes']/fn:map">
                             <xsl:variable name="code-code" select="fn:string[@key='code']/text()"/>
                             <xsl:variable name="code-system" select="fn:string[@key='codeSystem']/text()"/>
                             <xsl:if test="$code-system = ('EVMPD', 'CAS', 'SIAMED', 'FDA UNII', 'SVG', 'ECHA (EC/EINECS)')">
@@ -233,9 +234,9 @@
                 </xsl:if>
 
                 <!-- Relationships -->
-                <xsl:if test="$json-doc/fn:map/fn:array[@key='relationships']">
+                <xsl:if test="$root/fn:array[@key='relationships']">
                     <fn:array key="relationship">
-                        <xsl:for-each select="$json-doc/fn:map/fn:array[@key='relationships']/fn:map">
+                        <xsl:for-each select="$root/fn:array[@key='relationships']/fn:map">
                             <xsl:variable name="rel-type" select="fn:string[@key='type']/text()"/>
                             <xsl:variable name="rel-ref" select="fn:map[@key='relatedSubstance']/fn:string[@key='refuuid']/text()"/>
                             <fn:map>
@@ -256,7 +257,7 @@
                 </xsl:if>
                 
                 <!-- Property -->
-                <xsl:variable name="props" select="$json-doc/fn:map/fn:array[@key='properties']/fn:map"/>
+                <xsl:variable name="props" select="$root/fn:array[@key='properties']/fn:map"/>
                 <xsl:if test="$props">
                     <fn:array key="property">
                         <xsl:for-each select="$props">
