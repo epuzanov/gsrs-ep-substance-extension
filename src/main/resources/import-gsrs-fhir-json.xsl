@@ -693,6 +693,17 @@
                                     <fn:string key="refuuid"><xsl:value-of select="substring-after($ref, 'SubstanceDefinition/')"/></fn:string>
                                 </fn:map>
                             </xsl:if>
+                            <xsl:variable name="amountNode" select="fn:map[@key='amount']/fn:map[@key='valueQuantity']"/>
+                            <xsl:if test="$amountNode/fn:number[@key='value']/text() or $amountNode/fn:string[@key='unit']/text()">
+                                <fn:map key="amount">
+                                    <xsl:if test="$amountNode/fn:number[@key='value']/text()">
+                                        <fn:number key="average"><xsl:value-of select="$amountNode/fn:number[@key='value']/text()"/></fn:number>
+                                    </xsl:if>
+                                    <xsl:if test="$amountNode/fn:string[@key='unit']/text()">
+                                        <fn:string key="units"><xsl:value-of select="$amountNode/fn:string[@key='unit']/text()"/></fn:string>
+                                    </xsl:if>
+                                </fn:map>
+                            </xsl:if>
                         </fn:map>
                     </xsl:for-each>
                 </fn:array>

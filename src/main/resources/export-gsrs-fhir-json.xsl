@@ -663,6 +663,19 @@
                                         </fn:map>
                                     </fn:array>
                                 </fn:map>
+                                <xsl:variable name="amount" select="fn:map[@key='amount']"/>
+                                <xsl:if test="$amount/fn:number[@key='average']/text() or $amount/fn:string[@key='units']/text()">
+                                    <fn:map key="amount">
+                                        <fn:map key="valueQuantity">
+                                            <xsl:if test="$amount/fn:number[@key='average']/text()">
+                                                <fn:number key="value"><xsl:value-of select="$amount/fn:number[@key='average']/text()"/></fn:number>
+                                            </xsl:if>
+                                            <xsl:if test="$amount/fn:string[@key='units']/text()">
+                                                <fn:string key="unit"><xsl:value-of select="$amount/fn:string[@key='units']/text()"/></fn:string>
+                                            </xsl:if>
+                                        </fn:map>
+                                    </fn:map>
+                                </xsl:if>
                             </fn:map>
                         </xsl:for-each>
                     </fn:array>
