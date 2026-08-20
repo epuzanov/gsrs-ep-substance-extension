@@ -21,22 +21,21 @@ The XslExporter can be used for the exporting of the substances using XSL templa
 #### Configuration
 
 ```
-ix.ginas.export.exporterfactories.substances.list.EmaSmsFhir = {
+ix.ginas.export.exporterfactories.substances.list.FhirR5 = {
     "exporterFactoryClass": "gsrs.module.substance.exporters.XslExporterFactory",
-    "order": 2000,
+    "order": 3400,
     "parameters": {
         "format": {
-            "extension": "ema.hfir.json.gz",
-            "displayName": "EMA SMS FHIR JSON File"
+            "extension": "fhir.r5.json",
+            "displayName": "FHIR R5 JSON File"
         },
-        "templateFile": "ema-fhir-json.xsl",
+        "templateFile": "export-gsrs-fhir-json.xsl",
         "header": "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\": [{\"resource\":",
-        "footer": "]}",
+        "footer": "}}]}",
         "delimiter": "},{\"resource\":",
-        "shouldCompress": true
+        "shouldCompress": false
     }
 }
-
 ix.ginas.export.exporterfactories.substances.list.Gsrsp = {
     "exporterFactoryClass": "gsrs.module.substance.exporters.XslExporterFactory",
     "order": 2100,
@@ -45,11 +44,54 @@ ix.ginas.export.exporterfactories.substances.list.Gsrsp = {
             "extension": "gsrsp",
             "displayName": "GSRS portable, gzipped JSON (.gsrs)"
         },
-        "templateFile": "gsrsp.xsl",
+        "templateFile": "export-gsrsp.xsl",
         "header": "\t\t",
         "footer": "",
         "delimiter": "\n\t\t",
         "shouldCompress": true
+    }
+}
+```
+
+### gsrs.module.substance.importers.XslImportAdapterFactory
+The XslImporteAdapter can be used for the importing of the substances using XSL template.
+
+#### Dependencies
+* net.sf.saxon.Saxon-HE
+
+#### Configuration
+
+```
+gsrs.importAdapterFactories.substances.list.GSRSPImportAdapterFactory = {
+    "adapterName": "GSRSP JSON Adapter",
+    "importAdapterFactoryClass": "gsrs.module.substance.importers.XslImportAdapterFactory",
+    "stagingAreaServiceClass": "gsrs.stagingarea.service.DefaultStagingAreaService",
+    "entityServiceClass" :"gsrs.dataexchange.SubstanceStagingAreaEntityService",
+    "description" : "Portable GSRSP JSON file importer",
+    "supportedFileExtensions": [
+        "gsrsp",
+        "gz"
+    ],
+    "parameters": {
+        "templateFile": "import-gsrsp.xsl",
+        "delimiter": "\n\t\t"
+    }
+}
+
+gsrs.importAdapterFactories.substances.list.FhirR5ImportAdapterFactory = {
+    "adapterName": "GSRS FHIR R5 JSON Adapter",
+    "importAdapterFactoryClass": "gsrs.module.substance.importers.XslImportAdapterFactory",
+    "stagingAreaServiceClass": "gsrs.stagingarea.service.DefaultStagingAreaService",
+    "entityServiceClass" :"gsrs.dataexchange.SubstanceStagingAreaEntityService",
+    "description" : "GSRS FHIR R5 JSON file importer",
+    "supportedFileExtensions": [
+        "json"
+    ],
+    "parameters": {
+        "templateFile": "import-gsrs-fhir-json.xsl",
+        "header": "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\": [{\"resource\":",
+        "footer": "}}]}",
+        "delimiter": "},{\"resource\":"
     }
 }
 ```

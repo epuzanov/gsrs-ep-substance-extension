@@ -98,6 +98,31 @@
                                         </fn:map>
                                     </fn:array>
                                 </xsl:if>
+                                <xsl:variable name="isPublicDomain" select="fn:boolean[@key='publicDomain']/text() = 'true'"/>
+                                <xsl:variable name="hasPublicDomainReleaseTag" select="fn:array[@key='tags']/fn:string = 'PUBLIC_DOMAIN_RELEASE'"/>
+                                <fn:array key="securityLabel">
+                                    <fn:map>
+                                        <fn:array key="coding">
+                                            <fn:map>
+                                                <fn:string key="system">http://terminology.hl7.org/CodeSystem/v3-Confidentiality</fn:string>
+                                                <xsl:choose>
+                                                    <xsl:when test="$hasPublicDomainReleaseTag">
+                                                        <fn:string key="code">U</fn:string>
+                                                        <fn:string key="display">Unrestricted</fn:string>
+                                                    </xsl:when>
+                                                    <xsl:when test="$isPublicDomain">
+                                                        <fn:string key="code">N</fn:string>
+                                                        <fn:string key="display">Normal</fn:string>
+                                                    </xsl:when>
+                                                    <xsl:otherwise>
+                                                        <fn:string key="code">R</fn:string>
+                                                        <fn:string key="display">Restricted</fn:string>
+                                                    </xsl:otherwise>
+                                                </xsl:choose>
+                                            </fn:map>
+                                        </fn:array>
+                                    </fn:map>
+                                </fn:array>
                             </fn:map>
                         </xsl:for-each>
                     </xsl:if>
