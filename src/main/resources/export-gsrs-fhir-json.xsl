@@ -311,6 +311,69 @@
                                     </xsl:for-each>
                                 </fn:array>
                             </xsl:if>
+                            <xsl:if test="$poly/fn:map[@key='displayStructure']/fn:string[@key='molfile']/text() or
+                                         $poly/fn:map[@key='displayStructure']/fn:string[@key='formula']/text() or
+                                         $poly/fn:map[@key='displayStructure']/fn:number[@key='mwt']/text() or
+                                         $poly/fn:map[@key='idealizedStructure']/fn:string[@key='molfile']/text() or
+                                         $poly/fn:map[@key='idealizedStructure']/fn:string[@key='formula']/text() or
+                                         $poly/fn:map[@key='idealizedStructure']/fn:number[@key='mwt']/text()">
+                                <fn:array key="repeat">
+                                    <fn:map>
+                                        <xsl:if test="$poly/fn:map[@key='displayStructure']/fn:number[@key='mwt']/text() or
+                                                     $poly/fn:map[@key='idealizedStructure']/fn:number[@key='mwt']/text()">
+                                            <fn:map key="repeatUnitAmountType">
+                                                <fn:array key="coding">
+                                                    <fn:map>
+                                                        <fn:string key="system">http://terminology.hl7.org/CodeSystem/relation-type</fn:string>
+                                                        <fn:string key="code">VSELO</fn:string>
+                                                    </fn:map>
+                                                </fn:array>
+                                            </fn:map>
+                                        </xsl:if>
+                                        <fn:array key="repeatUnit">
+                                            <fn:map>
+                                                <xsl:if test="$poly/fn:map[@key='displayStructure']/fn:string[@key='formula']/text() or
+                                                             $poly/fn:map[@key='idealizedStructure']/fn:string[@key='formula']/text()">
+                                                    <fn:string key="amountSubstanceType">
+                                                        <xsl:value-of select="($poly/fn:map[@key='displayStructure']/fn:string[@key='formula']/text(), $poly/fn:map[@key='idealizedStructure']/fn:string[@key='formula']/text())[1]"/>
+                                                    </fn:string>
+                                                </xsl:if>
+                                                <xsl:if test="$poly/fn:map[@key='displayStructure']/fn:string[@key='molfile']/text() or
+                                                             $poly/fn:map[@key='idealizedStructure']/fn:string[@key='molfile']/text()">
+                                                    <fn:array key="structuralRepresentation">
+                                                        <xsl:for-each select="($poly/fn:map[@key='displayStructure'], $poly/fn:map[@key='idealizedStructure'])[fn:string[@key='molfile']/text()]">
+                                                            <fn:map>
+                                                                <fn:map key="format">
+                                                                    <fn:array key="coding">
+                                                                        <fn:map>
+                                                                            <fn:string key="system">http://hl7.org/fhir/substance-representation-format</fn:string>
+                                                                            <fn:string key="code">MOLFILE</fn:string>
+                                                                        </fn:map>
+                                                                    </fn:array>
+                                                                </fn:map>
+                                                                <fn:string key="representation"><xsl:value-of select="fn:string[@key='molfile']/text()"/></fn:string>
+                                                                <xsl:if test="fn:string[@key='formula']/text()">
+                                                                    <fn:string key="attachment">
+                                                                        <xsl:value-of select="fn:string[@key='formula']/text()"/>
+                                                                    </fn:string>
+                                                                </xsl:if>
+                                                            </fn:map>
+                                                        </xsl:for-each>
+                                                    </fn:array>
+                                                </xsl:if>
+                                            </fn:map>
+                                        </fn:array>
+                                        <xsl:if test="$poly/fn:map[@key='displayStructure']/fn:number[@key='mwt']/text() or
+                                                     $poly/fn:map[@key='idealizedStructure']/fn:number[@key='mwt']/text()">
+                                            <fn:map key="averageMolecularFormula">
+                                                <fn:string key="text">
+                                                    <xsl:value-of select="string(($poly/fn:map[@key='displayStructure']/fn:number[@key='mwt']/text(), $poly/fn:map[@key='idealizedStructure']/fn:number[@key='mwt']/text())[1])"/>
+                                                </fn:string>
+                                            </fn:map>
+                                        </xsl:if>
+                                    </fn:map>
+                                </fn:array>
+                            </xsl:if>
                         </fn:map>
                     </xsl:if>
                 </fn:array>

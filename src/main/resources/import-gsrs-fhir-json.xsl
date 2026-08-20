@@ -597,6 +597,25 @@
                         </xsl:for-each>
                     </fn:array>
                 </xsl:if>
+                <xsl:variable name="repeat" select="$polyContained/fn:array[@key='repeat']/fn:map[1]"/>
+                <xsl:variable name="repeatUnit" select="$repeat/fn:array[@key='repeatUnit']/fn:map[1]"/>
+                <xsl:variable name="repr" select="$repeatUnit/fn:array[@key='structuralRepresentation']/fn:map[fn:map[@key='format']/fn:array[@key='coding']/fn:map/fn:string[@key='code']/text()='MOLFILE'][1]"/>
+                <xsl:variable name="displayMolfile" select="$repr/fn:string[@key='representation']/text()"/>
+                <xsl:variable name="displayFormula" select="$repeatUnit/fn:string[@key='amountSubstanceType']/text()"/>
+                <xsl:variable name="displayMwt" select="$repeat/fn:map[@key='averageMolecularFormula']/fn:string[@key='text']/text()"/>
+                <xsl:if test="$displayMolfile or $displayFormula or $displayMwt">
+                    <fn:map key="displayStructure">
+                        <xsl:if test="$displayMolfile">
+                            <fn:string key="molfile"><xsl:value-of select="$displayMolfile"/></fn:string>
+                        </xsl:if>
+                        <xsl:if test="$displayFormula">
+                            <fn:string key="formula"><xsl:value-of select="$displayFormula"/></fn:string>
+                        </xsl:if>
+                        <xsl:if test="$displayMwt">
+                            <fn:number key="mwt"><xsl:value-of select="$displayMwt"/></fn:number>
+                        </xsl:if>
+                    </fn:map>
+                </xsl:if>
                 <xsl:variable name="publicRefId" select="local:first-public-reference-id()"/>
                 <xsl:if test="$publicRefId">
                     <fn:array key="references">
