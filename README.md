@@ -53,6 +53,164 @@ ix.ginas.export.exporterfactories.substances.list.Gsrsp = {
 }
 ```
 
+#### Additional XSL template parameters
+
+Both factories support the optional `xslParameters` property, a name/value map of
+extra parameters set on the XSL transformer in addition to the ones provided by
+the adapter itself (`input` for the exporter; `input` and `input-format` for the
+importer). Values are passed as strings. Parameter names can be plain (`name`),
+prefixed (`prefix:name`), Clark (`{uri}name`) or EQName (`Q{uri}name`) notation.
+Prefixed names require the corresponding mapping in the optional `xslNamespaces`
+property.
+
+The parameters can be supplied in three places:
+
+| Place | Exporter | Importer |
+|---|---|---|
+| GSRS configuration file | `parameters` block of the factory entry | `parameters` block of the factory entry |
+| Per request | detailed parameters of the export request | adapter settings of the import job |
+| Built-in (always set by the adapter) | `input` | `input`, `input-format` |
+
+Configuration values form the base, request-time values override them, and the
+built-in parameters are applied last so they always win.
+
+##### Exporter example
+
+```
+ix.ginas.export.exporterfactories.substances.list.FhirR5 = {
+    "exporterFactoryClass": "gsrs.module.substance.exporters.XslExporterFactory",
+    "order": 3400,
+    "parameters": {
+        "format": {
+            "extension": "fhir.r5.json",
+            "displayName": "FHIR R5 JSON File"
+        },
+        "templateFile": "export-gsrs-fhir-json.xsl",
+        "header": "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\": [{\"resource\":",
+        "footer": "}}]}",
+        "delimiter": "},{\"resource\":",
+        "shouldCompress": false,
+        "xslParameters": {
+            "language": "en",
+            "emit-ids": "true",
+            "idmp:version": "2"
+        },
+        "xslNamespaces": {
+            "idmp": "urn:gsrs:idmp"
+        }
+    }
+}
+```
+
+The same values can be overridden for a single export request by sending them in
+the request's detailed parameters:
+
+```
+{
+    "format": "fhir.r5.json",
+    "xslParameters": {
+        "language": "de"
+    }
+}
+```
+
+`xslParameters` and `xslNamespaces` are published in the exporter's parameter
+schema, so they are rendered as free-form key/value fields in the GSRS export
+dialog.
+
+##### GSRSP exporter example: setting `code-system`
+
+The `export-gsrsp.xsl` template adds a provenance entry to every exported
+substance. Its `citation` names the code system the portable document is written
+for, and it comes from the `code-system` parameter, which defaults to `FDA UNII`:
+
+```xml
+<xsl:param name="code-system" as="xs:string" select="'FDA UNII'"/>
+```
+
+A registry that records another identifier system sets the parameter instead of
+editing the stylesheet. In the GSRS configuration file:
+
+```
+ix.ginas.export.exporterfactories.substances.list.Gsrsp = {
+    "exporterFactoryClass": "gsrs.module.substance.exporters.XslExporterFactory",
+    "order": 2100,
+    "parameters": {
+        "format": {
+            "extension": "gsrsp",
+            "displayName": "GSRS portable, gzipped JSON (.gsrs)"
+        },
+        "templateFile": "export-gsrsp.xsl",
+        "header": "\t\t",
+        "footer": "",
+        "delimiter": "\n\t\t",
+        "shouldCompress": true,
+        "xslParameters": {
+            "code-system": "EMA SMS"
+        }
+    }
+}
+```
+
+`code-system` is a plain name, so no `xslNamespaces` entry is needed. For a
+single export the same override goes in the request's detailed parameters:
+
+```
+{
+    "format": "gsrsp",
+    "xslParameters": {
+        "code-system": "EMA SMS"
+    }
+}
+```
+
+Because the parameter has a default in the stylesheet, an export that does not
+set it still succeeds and is cited as `FDA UNII`.
+
+##### Importer example
+
+```
+gsrs.importAdapterFactories.substances.list.FhirR5ImportAdapterFactory = {
+    "adapterName": "GSRS FHIR R5 JSON Adapter",
+    "importAdapterFactoryClass": "gsrs.module.substance.importers.XslImportAdapterFactory",
+    "stagingAreaServiceClass": "gsrs.stagingarea.service.DefaultStagingAreaService",
+    "entityServiceClass" :"gsrs.dataexchange.SubstanceStagingAreaEntityService",
+    "description" : "GSRS FHIR R5 JSON file importer",
+    "supportedFileExtensions": [
+        "json"
+    ],
+    "parameters": {
+        "templateFile": "import-gsrs-fhir-json.xsl",
+        "header": "{\"resourceType\":\"Bundle\",\"type\":\"collection\",\"entry\": [{\"resource\":",
+        "footer": "}}]}",
+        "delimiter": "},{\"resource\":",
+        "xslParameters": {
+            "language": "en",
+            "emit-ids": "true",
+            "idmp:version": "2"
+        },
+        "xslNamespaces": {
+            "idmp": "urn:gsrs:idmp"
+        }
+    }
+}
+```
+
+For the importer the same values can be supplied per import job in the adapter
+settings, either nested under `parameters` or directly on the settings node:
+
+```
+{
+    "parameters": {
+        "templateFile": "import-gsrs-fhir-json.xsl",
+        "xslParameters": {
+            "language": "de"
+        }
+    }
+}
+```
+
+
 ### gsrs.module.substance.importers.XslImportAdapterFactory
 The XslImporteAdapter can be used for the importing of the substances using XSL template.
 

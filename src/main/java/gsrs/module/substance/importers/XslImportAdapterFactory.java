@@ -3,6 +3,7 @@ package gsrs.module.substance.importers;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import gsrs.imports.ImportAdapter;
+import gsrs.module.substance.utils.XslParameterUtils;
 import gsrs.module.substance.importers.importActionFactories.SubstanceImportAdapterFactoryBase;
 import gsrs.springUtils.AutowireHelper;
 
@@ -11,7 +12,9 @@ import ix.ginas.models.v1.Substance;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Factory for creating {@link XslImportAdapter} instances.
@@ -31,6 +34,8 @@ public class XslImportAdapterFactory extends SubstanceImportAdapterFactoryBase {
     private String header = "";
     private String footer = "";
     private String delimiter = "";
+    private Map<String, String> xslParameters = new LinkedHashMap<>();
+    private Map<String, String> xslNamespaces = new LinkedHashMap<>();
     private List<String> extensions = Arrays.asList("xml", "json");
 
     protected Class stagingAreaService;
@@ -94,6 +99,32 @@ public class XslImportAdapterFactory extends SubstanceImportAdapterFactoryBase {
         this.delimiter = delimiter;
     }
 
+    /**
+     * Sets the additional parameters passed to the XSL template on every record.
+     *
+     * @param xslParameters map of template parameter names to their values
+     */
+    public void setXslParameters(Map<String, String> xslParameters) {
+        this.xslParameters = xslParameters;
+    }
+
+    public Map<String, String> getXslParameters() {
+        return xslParameters;
+    }
+
+    /**
+     * Sets the namespace prefix mappings used to resolve prefixed parameter names.
+     *
+     * @param xslNamespaces mapping of namespace prefixes to namespace URIs
+     */
+    public void setXslNamespaces(Map<String, String> xslNamespaces) {
+        this.xslNamespaces = xslNamespaces;
+    }
+
+    public Map<String, String> getXslNamespaces() {
+        return xslNamespaces;
+    }
+
     @Override
     public List<String> getSupportedFileExtensions() {
         return this.extensions;
@@ -113,6 +144,12 @@ public class XslImportAdapterFactory extends SubstanceImportAdapterFactoryBase {
         importAdapter.setHeader(header);
         importAdapter.setFooter(footer);
         importAdapter.setDelimiter(delimiter);
+        importAdapter.setXslParameters(XslParameterUtils.merge(
+            xslParameters,
+            XslParameterUtils.fromSettings(adapterSettings)));
+        importAdapter.setXslNamespaces(XslParameterUtils.merge(
+            xslNamespaces,
+            XslParameterUtils.namespacesFromSettings(adapterSettings)));
         AutowireHelper.getInstance().autowire(importAdapter);
         return importAdapter;
     }

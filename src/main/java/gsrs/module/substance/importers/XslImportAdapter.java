@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import gsrs.imports.ImportAdapter;
 import gsrs.json.JsonEntityUtil;
+import gsrs.module.substance.utils.XslParameterUtils;
 
 import ix.ginas.models.v1.Substance;
 import ix.ginas.utils.JsonSubstanceFactory;
@@ -38,6 +39,8 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
@@ -55,10 +58,10 @@ import javax.xml.transform.Source;
  * {@link JsonSubstanceFactory#makeSubstance(JsonNode)} and returned as a
  * {@link Stream} of {@link Substance} objects.</p>
  *
- * <p>The XSL template receives the raw input text via the {@code raw-input}
+ * <p>The XSL template receives the raw input text via the {@code input}
  * parameter. For JSON-to-JSON transformations the stylesheet can parse the value
- * with {@code json-to-xml($raw-input)}; for XML-to-JSON transformations the
- * value can be parsed with {@code parse-xml($raw-input)}. The existing
+ * with {@code json-to-xml($input)}; for XML-to-JSON transformations the
+ * value can be parsed with {@code parse-xml($input)}. The existing
  * GSRS-to-FHIR stylesheets in this project demonstrate the JSON parsing
  * pattern.</p>
  *
@@ -77,6 +80,8 @@ public class XslImportAdapter implements ImportAdapter<Substance> {
     private String header = "";
     private String footer = "";
     private String delimiter = "";
+    private Map<String, String> xslParameters = Collections.emptyMap();
+    private Map<String, String> xslNamespaces = Collections.emptyMap();
 
     public void setTemplateFile(String templateFile) {
         this.templateFile = templateFile;
@@ -92,6 +97,37 @@ public class XslImportAdapter implements ImportAdapter<Substance> {
 
     public String getInputFormat() {
         return inputFormat;
+    }
+
+    /**
+     * Sets the additional parameters passed to the XSL template on every record.
+     *
+     * <p>The parameters are passed to the template in addition to the standard
+     * {@code input} and {@code input-format} parameters. Values supplied in the
+     * parse settings under the {@code xslParameters} key override the ones
+     * configured here.</p>
+     *
+     * @param xslParameters map of template parameter names to their values
+     */
+    public void setXslParameters(Map<String, String> xslParameters) {
+        this.xslParameters = xslParameters == null ? Collections.emptyMap() : xslParameters;
+    }
+
+    public Map<String, String> getXslParameters() {
+        return xslParameters;
+    }
+
+    /**
+     * Sets the namespace prefix mappings used to resolve prefixed parameter names.
+     *
+     * @param xslNamespaces mapping of namespace prefixes to namespace URIs
+     */
+    public void setXslNamespaces(Map<String, String> xslNamespaces) {
+        this.xslNamespaces = xslNamespaces == null ? Collections.emptyMap() : xslNamespaces;
+    }
+
+    public Map<String, String> getXslNamespaces() {
+        return xslNamespaces;
     }
 
     public void setHeader(String header) {
@@ -142,6 +178,13 @@ public class XslImportAdapter implements ImportAdapter<Substance> {
             records = new String[]{cleanedInput};
         }
 
+        Map<String, String> parameters = XslParameterUtils.merge(
+            xslParameters,
+            XslParameterUtils.fromSettings(settings));
+        Map<String, String> namespaces = XslParameterUtils.merge(
+            xslNamespaces,
+            XslParameterUtils.namespacesFromSettings(settings));
+
         for (String record : records) {
             if (record == null) {
                 continue;
@@ -153,7 +196,7 @@ public class XslImportAdapter implements ImportAdapter<Substance> {
             }
 
             try {
-                String transformedJson = transform(cleanedRecord);
+                String transformedJson = transform(cleanedRecord, parameters, namespaces);
                 if (transformedJson == null || transformedJson.isEmpty()) {
                     log.warn("XSL transformation produced no output for a record; skipping.");
                     continue;
@@ -198,7 +241,8 @@ public class XslImportAdapter implements ImportAdapter<Substance> {
         return builder.toString();
     }
 
-    private String transform(String rawInput) throws SaxonApiException, IOException {
+    private String transform(String rawInput, Map<String, String> parameters, Map<String, String> namespaces)
+            throws SaxonApiException, IOException {
         Processor processor = new Processor(false);
         XsltCompiler compiler = processor.newXsltCompiler();
 
@@ -229,7 +273,8 @@ public class XslImportAdapter implements ImportAdapter<Substance> {
                     "XML".equalsIgnoreCase(inputFormat) ? rawInput : "<root/>")));
         transformer.setInitialContextNode(initialNode);
 
-        transformer.setParameter(new QName("raw-input"), XdmAtomicValue.makeAtomicValue(rawInput));
+        XslParameterUtils.applyParameters(transformer, parameters, namespaces);
+        transformer.setParameter(new QName("input"), XdmAtomicValue.makeAtomicValue(rawInput));
         transformer.setParameter(new QName("input-format"), XdmAtomicValue.makeAtomicValue(inputFormat));
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
