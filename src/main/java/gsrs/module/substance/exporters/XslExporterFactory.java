@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import gsrs.module.substance.utils.LinkingIDUpdater;
 import gsrs.module.substance.utils.XslParameterUtils;
 
 import ix.ginas.exporters.*;
@@ -33,6 +34,7 @@ public class XslExporterFactory implements ExporterFactory<Substance> {
     private Map<String, String> xslParameters = new LinkedHashMap<>();
     private Map<String, String> xslNamespaces = new LinkedHashMap<>();
     private boolean shouldCompress = false;
+    private String linkingIdCodeSystem = "";
 
     public void setFormat(Map<String, String> m) {
         this.format = new OutputFormat(m.get("extension"), m.get("displayName"));
@@ -84,6 +86,25 @@ public class XslExporterFactory implements ExporterFactory<Substance> {
         this.shouldCompress = shouldCompress;
     }
 
+    /**
+     * Sets the code system used to build the {@code linkingID} values of the
+     * exported substance references.
+     *
+     * <p>When the value is a code system name, every reference's
+     * {@code linkingID} is written as {@code <codeSystem>:<code>}, where the
+     * code belongs to the referenced substance. An empty value leaves the
+     * identifiers GSRS derived untouched.</p>
+     *
+     * @param linkingIdCodeSystem the code system name, may be {@code null}
+     */
+    public void setLinkingIdCodeSystem(String linkingIdCodeSystem) {
+        this.linkingIdCodeSystem = linkingIdCodeSystem;
+    }
+
+    public String getLinkingIdCodeSystem() {
+        return linkingIdCodeSystem;
+    }
+
     @Override
     public boolean supports(Parameters params) {
         return params.getFormat().equals(format);
@@ -103,21 +124,30 @@ public class XslExporterFactory implements ExporterFactory<Substance> {
         Map<String, String> namespaces = XslParameterUtils.merge(
             xslNamespaces,
             XslParameterUtils.namespacesFromJson(detailedParameters));
+        // linkingID handling lives entirely in LinkingIDUpdater; drop this line
+        // to remove the feature when GSRS resolves linkingID natively.
+        LinkingIDUpdater linkingIDUpdater = LinkingIDUpdater.create(
+            linkingIdCodeSystem, detailedParameters);
         if(shouldCompress) {
             try {
                 return new XslExporter(new GZIPOutputStream(out), templateFile, header, footer, delimiter,
-                    parameters, namespaces);
+                    parameters, namespaces, linkingIDUpdater);
             } catch (Exception e) {
                 throw new IOException(e);
             }
         }
         try {
-            return new XslExporter(out, templateFile, header, footer, delimiter, parameters, namespaces);
+            return new XslExporter(out, templateFile, header, footer, delimiter, parameters, namespaces,
+                linkingIDUpdater);
         } catch (Exception e) {
             throw new IOException(e);
         }
     }
 
+    /**
+     * Publishes the exporter parameters, including the {@code linkingIdCodeSystem}
+     * value that {@link LinkingIDUpdater} reads.
+     */
     @Override
     public JsonNode getSchema() {
         ObjectNode parameters = JsonNodeFactory.instance.objectNode();
@@ -131,6 +161,11 @@ public class XslExporterFactory implements ExporterFactory<Substance> {
             .put("title", "XSL Parameter Namespaces")
             .put("description", "Namespace prefixes used by the XSL parameter names");
         namespaces.putObject("additionalProperties").put("type", "string");
+        parameters.putObject(LinkingIDUpdater.PARAMETER_PROPERTY)
+            .put("type", "string")
+            .put("title", "Linking ID Code System")
+            .put("description", "Code system whose codes are written to the linkingID of the exported "
+                + "substance references as <codeSystem>:<code>. Leave empty to keep the identifiers GSRS derives.");
         return generateSchemaNode(getClass().getSimpleName(), parameters);
     }
 }

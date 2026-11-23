@@ -36,6 +36,7 @@ public class XslImportAdapterFactory extends SubstanceImportAdapterFactoryBase {
     private String delimiter = "";
     private Map<String, String> xslParameters = new LinkedHashMap<>();
     private Map<String, String> xslNamespaces = new LinkedHashMap<>();
+    private Map<String, String> codeSystemMappings = new LinkedHashMap<>();
     private List<String> extensions = Arrays.asList("xml", "json");
 
     protected Class stagingAreaService;
@@ -125,6 +126,23 @@ public class XslImportAdapterFactory extends SubstanceImportAdapterFactoryBase {
         return xslNamespaces;
     }
 
+    /**
+     * Sets the code system name remapping applied to the imported records.
+     *
+     * <p>Each entry maps a code system name found in the input to the name it
+     * must have after import. For example {@code {"UNII": "FDA UNII"}} rewrites
+     * every code whose code system is {@code UNII} to {@code FDA UNII}.</p>
+     *
+     * @param codeSystemMappings mapping of input code system names to their replacements
+     */
+    public void setCodeSystemMappings(Map<String, String> codeSystemMappings) {
+        this.codeSystemMappings = codeSystemMappings;
+    }
+
+    public Map<String, String> getCodeSystemMappings() {
+        return codeSystemMappings;
+    }
+
     @Override
     public List<String> getSupportedFileExtensions() {
         return this.extensions;
@@ -150,6 +168,7 @@ public class XslImportAdapterFactory extends SubstanceImportAdapterFactoryBase {
         importAdapter.setXslNamespaces(XslParameterUtils.merge(
             xslNamespaces,
             XslParameterUtils.namespacesFromSettings(adapterSettings)));
+        importAdapter.setCodeSystemMappings(codeSystemMappings);
         AutowireHelper.getInstance().autowire(importAdapter);
         return importAdapter;
     }

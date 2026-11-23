@@ -118,6 +118,54 @@ the request's detailed parameters:
 schema, so they are rendered as free-form key/value fields in the GSRS export
 dialog.
 
+##### Exporter example: resolving `linkingID` values with `linkingIdCodeSystem`
+
+Every exported substance reference carries a `linkingID` that GSRS derives from
+the reference's `approvalID`, `refuuid` or name, which only means something
+inside the deployment the export was taken from. Setting `linkingIdCodeSystem` to a
+code system name rewrites those values:
+
+```
+ix.ginas.export.exporterfactories.substances.list.Gsrsp = {
+    "exporterFactoryClass": "gsrs.module.substance.exporters.XslExporterFactory",
+    "order": 2100,
+    "parameters": {
+        "format": {
+            "extension": "gsrsp",
+            "displayName": "GSRS portable, gzipped JSON (.gsrs)"
+        },
+        "templateFile": "export-gsrsp.xsl",
+        "header": "\t\t",
+        "footer": "",
+        "delimiter": "\n\t\t",
+        "shouldCompress": true,
+        "linkingIdCodeSystem": "FDA UNII"
+    }
+}
+```
+
+For every object that has a `refuuid`, the exporter looks up the referenced
+substance by that uuid, finds its code in the configured code system, and writes
+`linkingID` as `<codeSystem>:<code>`, for example `FDA UNII:C67P1734QJ`. The
+rewrite happens on the substance JSON before it is handed to the XSL template, so
+a template that keeps `linkingID` writes the resolved identifier.
+
+A reference whose substance has no code in that system is left with the
+`linkingID` it had, and each referenced substance is looked up only once per
+export, because a substance cited from several places is still one row. Leaving
+`linkingIdCodeSystem` empty (the default) keeps the identifiers GSRS derives.
+
+The configured value is a default, so a single export can resolve a different
+code system by passing `linkingIdCodeSystem` in the request's detailed parameters:
+
+```
+{
+    "format": "gsrsp",
+    "linkingIdCodeSystem": "SMS_ID"
+}
+```
+
+
 ##### GSRSP exporter example: setting `code-system`
 
 The `export-gsrsp.xsl` template adds a provenance entry to every exported
@@ -146,7 +194,7 @@ ix.ginas.export.exporterfactories.substances.list.Gsrsp = {
         "delimiter": "\n\t\t",
         "shouldCompress": true,
         "xslParameters": {
-            "code-system": "EMA SMS"
+            "code-system": "SMS_ID"
         }
     }
 }
@@ -159,7 +207,7 @@ single export the same override goes in the request's detailed parameters:
 {
     "format": "gsrsp",
     "xslParameters": {
-        "code-system": "EMA SMS"
+        "code-system": "SMS_ID"
     }
 }
 ```
@@ -209,6 +257,39 @@ settings, either nested under `parameters` or directly on the settings node:
     }
 }
 ```
+
+##### Importer example: remapping code system names with `codeSystemMappings`
+
+The `codeSystemMappings` parameter is a name/value map that renames code systems
+found in the imported records. Each entry maps an input code system name to the
+name it must have after import. For example, records that use `UNII` as the code
+system can be normalised to the canonical `FDA UNII`:
+
+```
+gsrs.importAdapterFactories.substances.list.GSRSPImportAdapterFactory = {
+    "adapterName": "GSRSP JSON Adapter",
+    "importAdapterFactoryClass": "gsrs.module.substance.importers.XslImportAdapterFactory",
+    "stagingAreaServiceClass": "gsrs.stagingarea.service.DefaultStagingAreaService",
+    "entityServiceClass" :"gsrs.dataexchange.SubstanceStagingAreaEntityService",
+    "description" : "Portable GSRSP JSON file importer",
+    "supportedFileExtensions": [
+        "gsrsp",
+        "gz"
+    ],
+    "parameters": {
+        "templateFile": "import-gsrsp.xsl",
+        "delimiter": "\n\t\t",
+        "codeSystemMappings": {
+            "UNII": "FDA UNII"
+        }
+    }
+}
+```
+
+The remapping is applied to the `codeSystem` of every imported `Code` and to
+the code system read from a `<codeSystem>:<code>` `linkingID` before the
+referenced substance is looked up. Codes with a code system that has no entry in
+the map are left unchanged.
 
 
 ### gsrs.module.substance.importers.XslImportAdapterFactory
